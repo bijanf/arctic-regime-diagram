@@ -1,5 +1,7 @@
 """Search and filter CMIP6 datasets from the Pangeo Google Cloud catalog."""
 
+from __future__ import annotations
+
 import logging
 from typing import Optional
 
@@ -12,7 +14,7 @@ PANGEO_CATALOG_URL = (
 )
 
 
-def open_catalog() -> intake.open_esm_datastore:
+def open_catalog():
     """Open the Pangeo CMIP6 intake-esm catalog.
 
     Returns
@@ -108,14 +110,27 @@ def find_common_models(
     available = None
     for var in variables:
         for exp in experiments:
-            sub = search_catalog(
+            # Search both gn and gr grids
+            sub_gn = search_catalog(
                 catalog,
                 variable_id=var,
                 experiment_id=exp,
                 source_id=model_list,
                 table_id=table_id,
+                grid_label="gn",
             )
-            models_here = set(sub.df["source_id"].unique())
+            sub_gr = search_catalog(
+                catalog,
+                variable_id=var,
+                experiment_id=exp,
+                source_id=model_list,
+                table_id=table_id,
+                grid_label="gr",
+            )
+            models_here = (
+                set(sub_gn.df["source_id"].unique())
+                | set(sub_gr.df["source_id"].unique())
+            )
             available = models_here if available is None else available & models_here
 
     common = sorted(available & set(model_list)) if available else []

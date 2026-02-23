@@ -50,9 +50,9 @@ period_experiment:
 constants:
   Rd: 287.05                # J/(kg·K), gas constant for dry air
   cp: 1004.0                # J/(kg·K), specific heat at constant pressure
-  Lv: 2.501e6              # J/kg, latent heat of vaporization
+  Lv: 2501000.0            # J/kg, latent heat of vaporization
   g: 9.81                   # m/s², gravitational acceleration
-  f0: 1.2e-4               # s⁻¹, Coriolis parameter at ~55°N
+  f0: 0.00012              # s⁻¹, Coriolis parameter at ~55°N
   H: 8500.0                # m, scale height
   kappa: 0.2854             # Rd/cp
   p0: 1000.0               # hPa, reference pressure for θ

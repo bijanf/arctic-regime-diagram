@@ -37,7 +37,13 @@ def load_processed(model: str, exp: str, var: str,
     if not path.exists():
         logger.warning("Missing: %s", path)
         return None
-    return xr.open_dataset(path)
+    ds = xr.open_dataset(path)
+    # Squeeze singleton dimensions from Pangeo (member_id, dcpp_init_year)
+    for dim in list(ds.dims):
+        if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude"):
+            if ds.sizes[dim] == 1:
+                ds = ds.squeeze(dim, drop=True)
+    return ds
 
 
 def compute_R(ds_ta: xr.Dataset, cfg: dict) -> float:
@@ -67,13 +73,16 @@ def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
     ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
 
     # Meridional temperature gradient at Arctic edge
-    # We need a wider latitude range for the gradient; use 55-65°N from ta
-    # If the preprocessed file only has 60-90°N, we need the edge data too.
-    # For robustness, compute gradient from available latitudes.
+    # Data may only cover 60-90°N with coarse resolution,
+    # so use 60-75°N to ensure enough points for differentiation
+    lat_min_avail = float(ta["lat"].min())
+    edge_lat_min = max(cfg["domain"]["edge_lat_min"], lat_min_avail)
+    edge_lat_max = 75.0  # Broad enough for coarse-res models
+
     dT_dy = meridional_T_gradient(
         ta,
-        lat_min=cfg["domain"]["edge_lat_min"],
-        lat_max=cfg["domain"]["edge_lat_max"],
+        lat_min=edge_lat_min,
+        lat_max=edge_lat_max,
         plev_level=cfg["pressure"]["gradient_level"],
     )
 
@@ -160,8 +169,12 @@ def main():
     df = pd.DataFrame(results)
     out_path = out_dir / "regime_diagnostics.csv"
     df.to_csv(out_path, index=False)
-    logger.info("Saved diagnostics to %s", out_path)
-    logger.info("\nSummary:\n%s", df.groupby(["scenario", "period"])[["R", "D"]].describe())
+    logger.info("Saved diagnostics to %s (%d rows)", out_path, len(df))
+    if len(df) > 0:
+        summary = df.groupby(["scenario", "period"])[["R", "D"]].agg(["mean", "std", "count"])
+        logger.info("\nSummary:\n%s", summary.to_string())
+    else:
+        logger.warning("No diagnostics computed!")
 
 
 if __name__ == "__main__":
