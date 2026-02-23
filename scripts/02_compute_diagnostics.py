@@ -37,7 +37,11 @@ def load_processed(model: str, exp: str, var: str,
     if not path.exists():
         logger.warning("Missing: %s", path)
         return None
-    ds = xr.open_dataset(path)
+    try:
+        ds = xr.open_dataset(path)
+    except ValueError:
+        # Handle non-standard calendars (365_day, 360_day, etc.)
+        ds = xr.open_dataset(path, use_cftime=True)
     # Squeeze singleton dimensions from Pangeo (member_id, dcpp_init_year)
     for dim in list(ds.dims):
         if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude"):
@@ -85,11 +89,10 @@ def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
     ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
 
     # Meridional temperature gradient at Arctic edge
-    # Data may only cover 60-90°N with coarse resolution,
-    # so use 60-75°N to ensure enough points for differentiation
     lat_min_avail = float(ta["lat"].min())
     edge_lat_min = max(cfg["domain"]["edge_lat_min"], lat_min_avail)
-    edge_lat_max = 75.0  # Broad enough for coarse-res models
+    edge_lat_max = min(cfg["domain"]["edge_lat_max"],
+                       float(ta["lat"].max()))
 
     dT_dy = meridional_T_gradient(
         ta,

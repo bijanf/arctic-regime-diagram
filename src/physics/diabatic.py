@@ -103,36 +103,36 @@ def meridional_T_gradient(
 
 
 def rossby_deformation_radius(sigma_bar: float, H: float = H_SCALE,
-                              f0: float = F0) -> float:
-    """Compute the Rossby deformation radius Ld = N·H/f₀.
+                              f0: float = F0,
+                              dp: float = 35000.0) -> float:
+    """Compute the Rossby deformation radius from QG stretching.
 
-    N is the Brunt-Väisälä frequency, related to σ̄ by N² ≈ g·σ̄ / T_ref
-    or more directly N = sqrt(σ̄) · Δp / H for the layer-averaged form.
+    From the QG PV equation, the stretching term f₀²/(σ·Δp²) defines
+    the internal deformation radius:
 
-    Here we use: N² = σ̄ · (g/T_ref) where T_ref ~ 250 K for mid-troposphere,
-    giving N = sqrt(σ̄ · g / T_ref).
+        Ld = √σ̄ · Δp / f₀
 
-    Then Ld = N · H / f₀.
+    Equivalently, defining N = √σ̄ · Δp / H gives Ld = N·H/f₀.
 
     Parameters
     ----------
     sigma_bar : float
-        Climatological mean static stability (dimensionless, ~1e-6 to 1e-5).
+        Climatological mean static stability (m² s⁻² Pa⁻², ~1e-6 to 1e-5).
     H : float
         Scale height (m).
     f0 : float
         Coriolis parameter (s⁻¹).
+    dp : float
+        Pressure depth of the averaging layer (Pa). Default 35000 Pa
+        (i.e., 500–850 hPa = 350 hPa).
 
     Returns
     -------
     float
         Rossby deformation radius Ld (m).
     """
-    g = 9.81
-    T_ref = 250.0  # K, representative mid-tropospheric temperature
-    N_squared = abs(sigma_bar) * g / T_ref
-    N = np.sqrt(max(N_squared, 1e-10))  # Ensure non-negative
-    Ld = N * H / f0
+    N = np.sqrt(max(abs(sigma_bar), 1e-20)) * dp / H
+    Ld = N * H / f0  # = sqrt(sigma_bar) * dp / f0
     logger.info("N = %.3e s⁻¹, Ld = %.0f km", N, Ld / 1000)
     return Ld
 
@@ -215,8 +215,8 @@ def diabatic_number(
     numerator = Lv * pr_arctic
     denominator = cp * dT_dy * f0 * Ld * H
 
-    if denominator == 0:
-        logger.warning("Denominator is zero in diabatic number; returning NaN")
+    if abs(denominator) < 1e-30:
+        logger.warning("Denominator is near-zero in diabatic number; returning NaN")
         return float("nan")
 
     D = numerator / denominator

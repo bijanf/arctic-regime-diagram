@@ -72,6 +72,27 @@ PERIOD_LABELS = {
     "ssp585_end": "SSP5-8.5 (2080-2100)",
 }
 
+# Reanalysis styling (line style per dataset)
+REANALYSIS_STYLES = {
+    "ERA5": {"color": "#000000", "ls": "-", "lw": 2.0, "ms": 6,
+             "label": "ERA5"},
+    "NCEP-R1": {"color": "#555555", "ls": "--", "lw": 1.5, "ms": 5,
+                "label": "NCEP/NCAR R1"},
+    "NCEP-R2": {"color": "#888888", "ls": ":", "lw": 1.5, "ms": 5,
+                "label": "NCEP-DOE R2"},
+    "JRA-55": {"color": "#666666", "ls": "-.", "lw": 1.5, "ms": 4,
+               "label": "JRA-55"},
+    "MERRA-2": {"color": "#999999", "ls": "-.", "lw": 1.5, "ms": 4,
+                "label": "MERRA-2"},
+}
+
+# Distinct markers for each 30-year climatological window
+WINDOW_MARKERS = {
+    "1961-1990": "o",    # circle
+    "1981-2010": "s",    # square
+    "1991-2020": "D",    # diamond
+}
+
 
 def apply_style():
     """Apply Nature Communications style to all subsequent plots."""

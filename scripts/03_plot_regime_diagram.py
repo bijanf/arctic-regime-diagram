@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def main():
     cfg = load_config()
 
-    # Load diagnostics
+    # Load CMIP6 diagnostics
     csv_path = PROJECT_ROOT / "data" / "diagnostics" / "regime_diagnostics.csv"
     if not csv_path.exists():
         logger.error("Diagnostics CSV not found: %s", csv_path)
@@ -32,6 +32,16 @@ def main():
     logger.info("Loaded %d rows from %s", len(df), csv_path)
     logger.info("Models: %s", sorted(df["model"].unique()))
     logger.info("Scenarios: %s", sorted(df["scenario"].unique()))
+
+    # Load reanalysis diagnostics (optional)
+    rean_path = PROJECT_ROOT / "data" / "diagnostics" / "reanalysis_diagnostics.csv"
+    df_rean = None
+    if rean_path.exists():
+        df_rean = pd.read_csv(rean_path)
+        logger.info("Loaded %d reanalysis rows from %s", len(df_rean), rean_path)
+        logger.info("Datasets: %s", sorted(df_rean["dataset"].unique()))
+    else:
+        logger.info("No reanalysis diagnostics found (run 04_reanalysis_diagnostics.py)")
 
     # Plot
     plot_cfg = cfg["plot"]
@@ -45,6 +55,7 @@ def main():
         D_range=tuple(plot_cfg["D_range"]),
         R_threshold=plot_cfg["R_threshold"],
         D_threshold=plot_cfg["D_threshold"],
+        df_reanalysis=df_rean,
     )
 
     # Also save PNG for quick preview

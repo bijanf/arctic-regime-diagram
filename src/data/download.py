@@ -53,19 +53,25 @@ def load_dataset(
         grid_label=grid_label,
     )
 
-    # Fall back to 'gr' grid if 'gn' not available
-    if len(sub.df) == 0 and grid_label == "gn":
-        logger.info("No 'gn' grid found for %s/%s/%s, trying 'gr'",
-                     source_id, experiment_id, variable_id)
-        sub = search_catalog(
-            catalog,
-            variable_id=variable_id,
-            experiment_id=experiment_id,
-            source_id=source_id,
-            table_id=table_id,
-            member_id=member_id,
-            grid_label="gr",
-        )
+    # Fall back to other grids if primary grid not available
+    if len(sub.df) == 0:
+        for alt_grid in ["gr", "gr1", "gn"]:
+            if alt_grid == grid_label:
+                continue
+            logger.info("No '%s' grid for %s/%s/%s, trying '%s'",
+                         grid_label, source_id, experiment_id, variable_id,
+                         alt_grid)
+            sub = search_catalog(
+                catalog,
+                variable_id=variable_id,
+                experiment_id=experiment_id,
+                source_id=source_id,
+                table_id=table_id,
+                member_id=member_id,
+                grid_label=alt_grid,
+            )
+            if len(sub.df) > 0:
+                break
 
     if len(sub.df) == 0:
         raise ValueError(

@@ -14,6 +14,7 @@ import pandas as pd
 
 from .style import (
     apply_style, SCENARIO_COLORS, PERIOD_MARKERS, PERIOD_LABELS,
+    REANALYSIS_STYLES, WINDOW_MARKERS,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ def plot_regime_diagram(
     D_threshold: float = 1.0,
     show_trajectories: bool = True,
     show_multi_model_mean: bool = True,
+    df_reanalysis: pd.DataFrame | None = None,
 ) -> plt.Figure:
     """Create the 4-quadrant regime diagram.
 
@@ -77,22 +79,25 @@ def plot_regime_diagram(
     ax.axvline(R_threshold, color="grey", ls="--", lw=0.8, zorder=1)
     ax.axhline(D_threshold, color="grey", ls="--", lw=0.8, zorder=1)
 
-    # --- Quadrant labels ---
-    pad = 0.02
-    ax.text(R_threshold / 2, D_range[0] + pad * (D_range[1] - D_range[0]),
-            "Dry–Linear", ha="center", va="bottom", fontsize=6.5,
-            style="italic", color="grey")
-    ax.text((R_threshold + R_range[1]) / 2,
-            D_range[0] + pad * (D_range[1] - D_range[0]),
-            "Dry–Nonlinear", ha="center", va="bottom", fontsize=6.5,
-            style="italic", color="grey")
-    ax.text(R_threshold / 2, D_range[1] - pad * (D_range[1] - D_range[0]),
-            "Moist–Linear", ha="center", va="top", fontsize=6.5,
-            style="italic", color="grey")
-    ax.text((R_threshold + R_range[1]) / 2,
-            D_range[1] - pad * (D_range[1] - D_range[0]),
-            "Moist–Nonlinear", ha="center", va="top", fontsize=6.5,
-            style="italic", color="#b2182b", fontweight="bold")
+    # --- Quadrant labels (placed in corners to avoid overlap) ---
+    pad_x = 0.01 * (R_range[1] - R_range[0])
+    pad_y = 0.015 * (D_range[1] - D_range[0])
+    # Bottom-left corner of Dry–Linear quadrant
+    ax.text(R_range[0] + pad_x, D_range[0] + pad_y,
+            "Dry–Linear", ha="left", va="bottom", fontsize=6.5,
+            style="italic", color="grey", zorder=10)
+    # Bottom-right corner of Dry–Nonlinear quadrant
+    ax.text(R_range[1] - pad_x, D_range[0] + pad_y,
+            "Dry–Nonlinear", ha="right", va="bottom", fontsize=6.5,
+            style="italic", color="grey", zorder=10)
+    # Just right of threshold line, near the top — avoids legend in upper-left
+    ax.text(R_threshold - pad_x, D_threshold + pad_y,
+            "Moist–Linear", ha="right", va="bottom", fontsize=6.5,
+            style="italic", color="grey", zorder=10)
+    # Top-right corner of Moist–Nonlinear quadrant
+    ax.text(R_range[1] - pad_x, D_range[1] - pad_y,
+            "Moist–Nonlinear", ha="right", va="top", fontsize=6.5,
+            style="italic", color="#b2182b", fontweight="bold", zorder=10)
 
     # --- Scatter individual models ---
     _plot_group(ax, df, "historical", "historical", alpha=0.25, size=20)
@@ -113,13 +118,16 @@ def plot_regime_diagram(
         means = _compute_means(df)
         _plot_means(ax, means, zorder=5)
 
-    # --- Trajectories ---
-    if show_trajectories and show_multi_model_mean:
-        means = _compute_means(df)
-        _plot_trajectories(ax, means, zorder=4)
+        # --- Trajectories ---
+        if show_trajectories:
+            _plot_trajectories(ax, means, zorder=4)
+
+    # --- Reanalysis trajectories ---
+    if df_reanalysis is not None and len(df_reanalysis) > 0:
+        _plot_reanalysis(ax, df_reanalysis, zorder=6)
 
     # --- Legend ---
-    _add_legend(ax)
+    _add_legend(ax, df_reanalysis=df_reanalysis)
 
     # --- Axes ---
     ax.set_xlim(R_range)
@@ -219,8 +227,52 @@ def _plot_trajectories(ax, means: pd.DataFrame, zorder=4):
                 )
 
 
-def _add_legend(ax):
-    """Add a compact legend for scenarios and periods."""
+def _plot_reanalysis(ax, df_rean, zorder=6):
+    """Plot reanalysis trajectories with distinct markers per window."""
+    for dataset in df_rean["dataset"].unique():
+        sub = df_rean[df_rean["dataset"] == dataset].sort_values("center_year")
+        if len(sub) == 0:
+            continue
+
+        style = REANALYSIS_STYLES.get(dataset, {
+            "color": "black", "ls": "-", "lw": 1.5, "ms": 5,
+            "label": dataset,
+        })
+
+        R_vals = sub["R"].values
+        D_vals = sub["D"].values
+        windows = sub["window"].values if "window" in sub.columns else None
+
+        # Draw connected trajectory line
+        ax.plot(R_vals, D_vals,
+                color=style["color"], ls=style["ls"], lw=style["lw"],
+                zorder=zorder)
+
+        # Draw a distinct marker at each window
+        for i, (r, d) in enumerate(zip(R_vals, D_vals)):
+            win = windows[i] if windows is not None else None
+            marker = WINDOW_MARKERS.get(win, "o")
+            ax.scatter(r, d, c=style["color"], marker=marker,
+                       s=style["ms"] ** 2, edgecolors="white",
+                       linewidths=0.5, zorder=zorder + 1)
+
+        # Add arrow on last segment to show direction
+        if len(R_vals) >= 2:
+            ax.annotate(
+                "", xy=(R_vals[-1], D_vals[-1]),
+                xytext=(R_vals[-2], D_vals[-2]),
+                arrowprops=dict(
+                    arrowstyle="-|>",
+                    color=style["color"],
+                    lw=style["lw"],
+                    mutation_scale=8,
+                ),
+                zorder=zorder,
+            )
+
+
+def _add_legend(ax, df_reanalysis=None):
+    """Add a compact legend for scenarios, periods, and reanalysis."""
     handles = []
 
     # Historical
@@ -247,5 +299,27 @@ def _add_legend(ax):
             markerfacecolor=SCENARIO_COLORS["ssp585"],
             markersize=6, label=PERIOD_LABELS[label_key],
         ))
+
+    # Reanalysis entries: dataset line + shared window markers
+    if df_reanalysis is not None:
+        # One entry per dataset (line style)
+        for dataset in df_reanalysis["dataset"].unique():
+            style = REANALYSIS_STYLES.get(dataset, {
+                "color": "black", "ls": "-", "ms": 5, "label": dataset,
+            })
+            handles.append(plt.Line2D(
+                [0], [0], marker="o", color=style["color"],
+                ls=style["ls"], markerfacecolor=style["color"],
+                markersize=5, lw=style.get("lw", 1.5),
+                label=style["label"],
+            ))
+        # Window marker legend (shared across datasets)
+        for win, marker in WINDOW_MARKERS.items():
+            handles.append(plt.Line2D(
+                [0], [0], marker=marker, color="w", ls="none",
+                markerfacecolor="#666666", markeredgecolor="#333333",
+                markeredgewidth=0.5, markersize=5,
+                label=win,
+            ))
 
     ax.legend(handles=handles, loc="upper left", fontsize=6.5)

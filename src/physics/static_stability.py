@@ -102,7 +102,7 @@ def static_stability(T: xr.DataArray, plev_name: str | None = None,
     # σ = -(Rd·T) / (p·θ) · (∂θ/∂p)
     sigma = -(Rd * T) / (plev_pa * theta) * dtheta_dp
     sigma.name = "sigma"
-    sigma.attrs["units"] = "K m^-1 (dimensionless stability)"
+    sigma.attrs["units"] = "m^2 s^-2 Pa^-2"
     sigma.attrs["long_name"] = "Static stability parameter"
     return sigma
 

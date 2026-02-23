@@ -1,7 +1,8 @@
-# Data directories
+# Data directories (large files, not tracked)
 data/raw/
 data/processed/
 data/diagnostics/
+data/reanalysis/
 
 # Python
 __pycache__/
@@ -29,8 +30,8 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 
-# Output figures (keep .gitkeep)
+# Output figures (keep .gitkeep and regime_diagram.png for README)
 figures/*.pdf
-figures/*.png
 figures/*.svg
+!figures/regime_diagram.png
 !figures/.gitkeep
