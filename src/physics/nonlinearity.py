@@ -1,7 +1,10 @@
 """Compute the nonlinearity ratio R = <|σ'|> / σ̄.
 
 R quantifies the amplitude of static stability fluctuations relative to
-the climatological mean. Key thresholds from the paper:
+the climatological mean. It captures both temporal variability and spatial
+heterogeneity of σ across the Arctic domain.
+
+Key thresholds from the paper:
   - R ≈ 0.1 : onset of nonlinear regime
   - R > 0.3 : subcritical instability regime
 """
@@ -53,10 +56,16 @@ def monthly_anomalies(sigma: xr.DataArray,
 
 def nonlinearity_ratio(sigma: xr.DataArray,
                        time_dim: str = "time") -> float:
-    """Compute the nonlinearity ratio R = <|σ'|>_time / σ̄.
+    """Compute the nonlinearity ratio R including spatio-temporal variability.
 
-    Both the numerator and denominator are area-weighted spatial means
-    over the Arctic domain (assumed to be the full lat extent of the input).
+    R = sqrt(<σ'²>_space,time) / <σ̄>_space
+
+    where σ' = σ(t,x) - <σ̄>_space (departure from the domain-mean climatology)
+    and averages are area-weighted over the Arctic domain.
+
+    This captures both temporal variability AND spatial heterogeneity,
+    consistent with the PV-stability framework where local departures
+    from the background state drive nonlinear dynamics.
 
     Parameters
     ----------
@@ -70,22 +79,55 @@ def nonlinearity_ratio(sigma: xr.DataArray,
     float
         Nonlinearity ratio R (dimensionless, positive).
     """
-    sigma_bar = climatological_mean(sigma, time_dim=time_dim)
-    sigma_prime = sigma - sigma_bar
-
-    # Time-mean of absolute anomalies
-    abs_sigma_prime_mean = np.abs(sigma_prime).mean(dim=time_dim)
-
-    # Area-weighted spatial mean
     ds_temp = sigma.to_dataset(name="sigma")
     weights = area_weights(ds_temp)
     lat_name = _get_lat_name(ds_temp)
 
-    numerator = (abs_sigma_prime_mean * weights).sum(dim=lat_name).mean()
-    denominator = (sigma_bar * weights).sum(dim=lat_name).mean()
+    # Domain-mean climatology: single scalar
+    sigma_clim = climatological_mean(sigma, time_dim=time_dim)
+    sigma_bar_domain = float((sigma_clim * weights).sum(dim=lat_name).mean())
 
-    R = float(numerator / denominator)
+    # Departures from domain-mean climatology (captures space + time variability)
+    sigma_prime = sigma - sigma_bar_domain
+
+    # RMS of departures (area-weighted, then time-averaged)
+    sigma_prime_sq = sigma_prime ** 2
+    # Area-weighted spatial mean of σ'² at each timestep
+    variance_t = (sigma_prime_sq * weights).sum(dim=lat_name).mean(dim="lon")
+    # Time-mean variance
+    mean_variance = float(variance_t.mean(dim=time_dim))
+    rms_sigma_prime = np.sqrt(mean_variance)
+
+    R = rms_sigma_prime / abs(sigma_bar_domain)
     return R
+
+
+def nonlinearity_ratio_seasonal(
+    sigma: xr.DataArray, season: str = "DJF", time_dim: str = "time"
+) -> float:
+    """Compute R for a specific season (e.g., DJF for winter).
+
+    Parameters
+    ----------
+    sigma : xr.DataArray
+        Layer-averaged static stability.
+    season : str
+        Season code: 'DJF', 'MAM', 'JJA', 'SON'.
+    time_dim : str
+        Time dimension name.
+
+    Returns
+    -------
+    float
+        Seasonal nonlinearity ratio R.
+    """
+    # Select season
+    sigma_season = sigma.sel(
+        {time_dim: sigma[time_dim].dt.season == season}
+    )
+    if sigma_season.sizes[time_dim] == 0:
+        return float("nan")
+    return nonlinearity_ratio(sigma_season, time_dim=time_dim)
 
 
 def nonlinearity_ratio_with_uncertainty(

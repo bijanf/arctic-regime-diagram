@@ -18,7 +18,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
 from src.physics.static_stability import static_stability, layer_mean_stability
-from src.physics.nonlinearity import nonlinearity_ratio
+from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seasonal
 from src.physics.diabatic import (
     meridional_T_gradient, arctic_mean_precipitation, diabatic_number,
 )
@@ -46,24 +46,36 @@ def load_processed(model: str, exp: str, var: str,
     return ds
 
 
-def compute_R(ds_ta: xr.Dataset, cfg: dict) -> float:
-    """Compute the nonlinearity ratio R from temperature data."""
+def compute_R(ds_ta: xr.Dataset, cfg: dict) -> dict:
+    """Compute the nonlinearity ratio R from temperature data.
+
+    Returns dict with R_annual, R_djf, and sigma_bar for use in D computation.
+    """
     # Extract temperature
     ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
 
     # Compute static stability on all levels
     sigma = static_stability(ta)
 
-    # Layer-mean stability (500-850 hPa)
-    sigma_layer = layer_mean_stability(
+    # Lower-troposphere layer (700-1000 hPa) where Arctic amplification is strongest
+    sigma_lower = layer_mean_stability(sigma, p_top=700.0, p_bot=1000.0)
+    # Mid-troposphere layer (500-850 hPa)
+    sigma_mid = layer_mean_stability(
         sigma,
         p_top=cfg["pressure"]["layer_top"],
         p_bot=cfg["pressure"]["layer_bot"],
     )
 
-    # Nonlinearity ratio
-    R = nonlinearity_ratio(sigma_layer)
-    return R
+    # Annual R (spatio-temporal, lower troposphere for max signal)
+    R_annual = nonlinearity_ratio(sigma_lower)
+
+    # Winter (DJF) R — Arctic amplification is strongest in winter
+    R_djf = nonlinearity_ratio_seasonal(sigma_lower, season="DJF")
+
+    # σ̄ for Ld computation in D
+    sigma_bar = float(sigma_mid.mean())
+
+    return {"R_annual": R_annual, "R_djf": R_djf, "sigma_bar": sigma_bar}
 
 
 def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
@@ -144,18 +156,22 @@ def main():
                     continue
 
                 try:
-                    R = compute_R(ds_ta, cfg)
-                    D = compute_D(ds_ta, ds_pr, cfg)
+                    R_dict = compute_R(ds_ta, cfg)
+                    D = compute_D(ds_ta, ds_pr, cfg,
+                                  sigma_bar_value=R_dict["sigma_bar"])
 
                     results.append({
                         "model": model,
                         "period": period_name,
                         "scenario": exp,
-                        "R": R,
+                        "R": R_dict["R_djf"],
+                        "R_annual": R_dict["R_annual"],
+                        "R_djf": R_dict["R_djf"],
                         "D": D,
                         "label": period_cfg["label"],
                     })
-                    logger.info("  R = %.4f, D = %.4f", R, D)
+                    logger.info("  R_annual=%.4f, R_djf=%.4f, D=%.4f",
+                                R_dict["R_annual"], R_dict["R_djf"], D)
 
                 except Exception as e:
                     logger.error("  Failed: %s", e)
