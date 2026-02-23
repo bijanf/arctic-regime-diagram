@@ -1,0 +1,74 @@
+# === Arctic Regime Diagram Configuration ===
+
+# Spatial domain
+domain:
+  arctic_lat_min: 60.0      # °N, southern boundary of Arctic averaging
+  arctic_lat_max: 90.0      # °N
+  edge_lat_min: 55.0        # °N, southern boundary for ∂T/∂y
+  edge_lat_max: 65.0        # °N, northern boundary for ∂T/∂y
+
+# Pressure levels (hPa)
+pressure:
+  layer_top: 500.0          # Top of averaging layer for σ
+  layer_bot: 850.0          # Bottom of averaging layer for σ
+  gradient_level: 700.0     # Level for meridional T gradient
+  full_range_top: 100.0     # Top of full column
+  full_range_bot: 1000.0    # Surface
+
+# Time periods (inclusive)
+periods:
+  historical:
+    start: "1980-01-01"
+    end: "2000-12-31"
+    label: "Historical (1980-2000)"
+  mid_century:
+    start: "2040-01-01"
+    end: "2060-12-31"
+    label: "Mid-century (2040-2060)"
+  end_century:
+    start: "2080-01-01"
+    end: "2100-12-31"
+    label: "End-century (2080-2100)"
+
+# CMIP6 experiments
+experiments:
+  - historical
+  - ssp245
+  - ssp585
+
+# Period-to-experiment mapping
+period_experiment:
+  historical: historical
+  mid_century:
+    - ssp245
+    - ssp585
+  end_century:
+    - ssp245
+    - ssp585
+
+# Physical constants
+constants:
+  Rd: 287.05                # J/(kg·K), gas constant for dry air
+  cp: 1004.0                # J/(kg·K), specific heat at constant pressure
+  Lv: 2.501e6              # J/kg, latent heat of vaporization
+  g: 9.81                   # m/s², gravitational acceleration
+  f0: 1.2e-4               # s⁻¹, Coriolis parameter at ~55°N
+  H: 8500.0                # m, scale height
+  kappa: 0.2854             # Rd/cp
+  p0: 1000.0               # hPa, reference pressure for θ
+
+# Regridding
+regrid:
+  target_resolution: 2.0    # degrees
+  method_ta: bilinear       # for temperature
+  method_pr: conservative   # for precipitation
+
+# Plotting
+plot:
+  figsize: [5.5, 5.0]      # inches (Nature Comms single column)
+  dpi: 300
+  format: pdf
+  R_range: [0.0, 0.5]
+  D_range: [0.0, 4.0]
+  R_threshold: 0.1          # Nonlinear onset
+  D_threshold: 1.0          # Moist-dominated threshold

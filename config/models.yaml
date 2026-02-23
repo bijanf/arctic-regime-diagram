@@ -1,0 +1,25 @@
+# CMIP6 models with both ta (Amon) and pr (Amon) across
+# historical, ssp245, and ssp585 experiments on Pangeo Google Cloud.
+
+models:
+  - ACCESS-CM2
+  - ACCESS-ESM1-5
+  - CanESM5
+  - CESM2
+  - CNRM-CM6-1
+  - EC-Earth3
+  - GFDL-ESM4
+  - IPSL-CM6A-LR
+  - MIROC6
+  - MPI-ESM1-2-LR
+  - MRI-ESM2-0
+  - NorESM2-LM
+  - UKESM1-0-LL
+
+# Preferred ensemble member (r1i1p1f1 where available)
+preferred_member: r1i1p1f1
+
+# Fallback members for models where r1i1p1f1 is unavailable
+fallback_members:
+  CNRM-CM6-1: r1i1p1f2
+  UKESM1-0-LL: r1i1p1f2

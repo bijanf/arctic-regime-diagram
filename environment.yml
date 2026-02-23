@@ -1,0 +1,26 @@
+name: arctic_regime
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - xarray
+  - dask
+  - netcdf4
+  - zarr
+  - intake
+  - intake-esm>=2023.0
+  - gcsfs
+  - cftime
+  - cf_xarray
+  - xesmf
+  - esmpy
+  - scipy
+  - matplotlib
+  - cartopy
+  - pandas
+  - pyyaml
+  - pip
+  - pip:
+    - cmip6_preprocessing

@@ -1,0 +1,36 @@
+# Data directories
+data/raw/
+data/processed/
+data/diagnostics/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Output figures (keep .gitkeep)
+figures/*.pdf
+figures/*.png
+figures/*.svg
+!figures/.gitkeep
