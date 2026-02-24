@@ -109,7 +109,10 @@ def static_stability(T: xr.DataArray, plev_name: str | None = None,
 
 def layer_mean_stability(sigma: xr.DataArray, p_top: float = 500.0,
                          p_bot: float = 850.0) -> xr.DataArray:
-    """Average static stability over a pressure layer.
+    """Average static stability over a pressure layer using dp-weighting.
+
+    Uses pressure-thickness (dp) weights instead of a simple mean, which
+    properly accounts for the varying spacing of pressure levels.
 
     Parameters
     ----------
@@ -144,4 +147,14 @@ def layer_mean_stability(sigma: xr.DataArray, p_top: float = 500.0,
     else:
         layer = sigma.sel({plev_name: slice(p_lo, p_hi)})
 
-    return layer.mean(dim=plev_name)
+    # dp-weighted average: use pressure intervals as weights
+    layer_plev = layer[plev_name].values
+    if len(layer_plev) < 2:
+        return layer.mean(dim=plev_name)
+
+    dp = np.abs(np.gradient(layer_plev))
+    dp_weights = xr.DataArray(dp, dims=[plev_name],
+                               coords={plev_name: layer_plev})
+    dp_weights = dp_weights / dp_weights.sum()
+
+    return (layer * dp_weights).sum(dim=plev_name)

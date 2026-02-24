@@ -57,6 +57,21 @@ constants:
   kappa: 0.2854             # Rd/cp
   p0: 1000.0               # hPa, reference pressure for θ
 
+# Eady growth rate domain (near the jet, not deep Arctic)
+eady:
+  lat_min: 50.0             # °N, southern boundary for Eady averaging
+  lat_max: 70.0             # °N, northern boundary for Eady averaging
+  p_top: 500.0              # hPa, top of Eady layer
+  p_bot: 850.0              # hPa, bottom of Eady layer
+
+# Wave diagnostics domains
+wave:
+  Ld_lat_min: 55.0          # °N, Ld averaging southern boundary
+  Ld_lat_max: 75.0          # °N, Ld averaging northern boundary
+  Ks_lat_min: 50.0          # °N, K_s² averaging southern boundary
+  Ks_lat_max: 70.0          # °N, K_s² averaging northern boundary
+  Ks_plev: 250.0            # hPa, K_s² evaluation level
+
 # Regridding
 regrid:
   target_resolution: 2.0    # degrees

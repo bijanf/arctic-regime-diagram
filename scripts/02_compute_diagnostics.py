@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Step 2: Compute R (nonlinearity ratio) and D (diabatic number) per model/period.
+"""Step 2: Compute R, D, Eady growth rate, and wave diagnostics per model/period.
 
 Reads preprocessed NetCDF files from data/processed/ and outputs a CSV
 summary table to data/diagnostics/regime_diagnostics.csv.
+
+Columns: model, period, scenario, R, R_annual, R_djf, D,
+         eady_dry, eady_moist, eady_ratio, Ld_mean_km, Ks_250, label
 """
 
 import logging
@@ -22,6 +25,8 @@ from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seas
 from src.physics.diabatic import (
     meridional_T_gradient, arctic_mean_precipitation, diabatic_number,
 )
+from src.physics.baroclinic import compute_eady_diagnostics
+from src.physics.wave_diagnostics import compute_wave_diagnostics
 from src.data.preprocess import subset_arctic, _get_plev_name
 
 logging.basicConfig(level=logging.INFO,
@@ -31,22 +36,52 @@ logger = logging.getLogger(__name__)
 
 def load_processed(model: str, exp: str, var: str,
                    period: str, data_dir: Path) -> xr.Dataset | None:
-    """Load a preprocessed NetCDF file, returning None if missing."""
+    """Load a preprocessed NetCDF file, returning None if missing or corrupt."""
     fname = f"{model}_{exp}_{var}_{period}.nc"
     path = data_dir / fname
     if not path.exists():
         logger.warning("Missing: %s", path)
         return None
+
+    # Reject files smaller than 1KB (empty shells)
+    if path.stat().st_size < 1024:
+        logger.warning("Suspiciously small file (%d bytes): %s",
+                        path.stat().st_size, path)
+        return None
+
     try:
         ds = xr.open_dataset(path)
     except ValueError:
         # Handle non-standard calendars (365_day, 360_day, etc.)
-        ds = xr.open_dataset(path, use_cftime=True)
+        try:
+            ds = xr.open_dataset(path, use_cftime=True)
+        except Exception as e:
+            logger.warning("Cannot open %s: %s", path, e)
+            return None
+    except (OSError, RuntimeError) as e:
+        # Handle corrupt/truncated NetCDF files
+        logger.warning("Cannot open %s: %s", path, e)
+        return None
+
     # Squeeze singleton dimensions from Pangeo (member_id, dcpp_init_year)
     for dim in list(ds.dims):
         if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude"):
             if ds.sizes[dim] == 1:
                 ds = ds.squeeze(dim, drop=True)
+
+    # Reject files with zero time steps
+    if ds.sizes.get("time", 0) == 0:
+        logger.warning("Zero timesteps: %s", path)
+        ds.close()
+        return None
+
+    # Reject files where primary variable is all-NaN
+    var_name = [v for v in ds.data_vars][0]
+    if ds[var_name].isnull().all():
+        logger.warning("All-NaN data: %s", path)
+        ds.close()
+        return None
+
     return ds
 
 
@@ -135,15 +170,97 @@ def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
     return D
 
 
+def compute_eady(ds_ta: xr.Dataset, ds_ua: xr.Dataset, cfg: dict) -> dict:
+    """Compute dry and moist Eady growth rate diagnostics.
+
+    Parameters
+    ----------
+    ds_ta : xr.Dataset
+        Temperature data on pressure levels.
+    ds_ua : xr.Dataset
+        Eastward wind data on pressure levels.
+    cfg : dict
+        Configuration dictionary.
+
+    Returns
+    -------
+    dict
+        Keys: eady_dry (day⁻¹), eady_moist (day⁻¹), eady_ratio (F).
+    """
+    ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
+    ua = ds_ua["ua"] if "ua" in ds_ua else ds_ua[list(ds_ua.data_vars)[0]]
+
+    # Use Eady-specific domain from config (near jet, 50-70°N)
+    eady_cfg = cfg.get("eady", {})
+    return compute_eady_diagnostics(
+        ua, ta,
+        lat_min=eady_cfg.get("lat_min", 50.0),
+        lat_max=eady_cfg.get("lat_max", 70.0),
+        p_top=eady_cfg.get("p_top", cfg["pressure"]["layer_top"]),
+        p_bot=eady_cfg.get("p_bot", cfg["pressure"]["layer_bot"]),
+    )
+
+
+def compute_waves(ds_ta: xr.Dataset, ds_ua: xr.Dataset,
+                  cfg: dict, sigma_bar: float) -> dict:
+    """Compute Ld map stats and refractive index diagnostics.
+
+    Parameters
+    ----------
+    ds_ta : xr.Dataset
+        Temperature data on pressure levels.
+    ds_ua : xr.Dataset
+        Eastward wind data on pressure levels.
+    cfg : dict
+        Configuration dictionary.
+    sigma_bar : float
+        Domain-mean layer-mean static stability.
+
+    Returns
+    -------
+    dict
+        Keys: Ld_mean_km, Ks_250.
+    """
+    ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
+    ua = ds_ua["ua"] if "ua" in ds_ua else ds_ua[list(ds_ua.data_vars)[0]]
+
+    # Use wave-specific domain from config
+    wave_cfg = cfg.get("wave", {})
+    return compute_wave_diagnostics(
+        ua, ta, sigma_bar,
+        lat_min=wave_cfg.get("Ld_lat_min", 55.0),
+        lat_max=wave_cfg.get("Ld_lat_max", 75.0),
+        p_top=cfg["pressure"]["layer_top"],
+        p_bot=cfg["pressure"]["layer_bot"],
+        f0=cfg["constants"]["f0"],
+        Ks_plev=wave_cfg.get("Ks_plev", 250.0),
+        Ks_lat_min=wave_cfg.get("Ks_lat_min", 50.0),
+        Ks_lat_max=wave_cfg.get("Ks_lat_max", 70.0),
+    )
+
+
+# Models to exclude due to known data quality issues
+EXCLUDE_MODELS = {"MCM-UA-1-0"}  # empty data shells
+
+
 def main():
     cfg = load_config()
-    data_dir = PROJECT_ROOT / "data" / "processed"
+
+    # Prefer regridded data; fall back to processed
+    data_dir = PROJECT_ROOT / "data" / "processed_regridded"
+    if not data_dir.exists() or len(list(data_dir.glob("*.nc"))) == 0:
+        logger.warning("Regridded data not found; using data/processed/")
+        data_dir = PROJECT_ROOT / "data" / "processed"
+
     out_dir = PROJECT_ROOT / "data" / "diagnostics"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
 
     for model in cfg["models"]:
+        if model in EXCLUDE_MODELS:
+            logger.info("Skipping excluded model: %s", model)
+            continue
         for period_name, period_cfg in cfg["periods"].items():
             mapping = cfg["period_experiment"][period_name]
             experiments = mapping if isinstance(mapping, list) else [mapping]
@@ -155,15 +272,18 @@ def main():
                 ds_pr = load_processed(model, exp, "pr", period_name, data_dir)
 
                 if ds_ta is None or ds_pr is None:
-                    logger.warning("  Skipping (missing data)")
+                    logger.warning("  Skipping (missing ta or pr)")
                     continue
+
+                # Optionally load ua (not required for R/D)
+                ds_ua = load_processed(model, exp, "ua", period_name, data_dir)
 
                 try:
                     R_dict = compute_R(ds_ta, cfg)
                     D = compute_D(ds_ta, ds_pr, cfg,
                                   sigma_bar_value=R_dict["sigma_bar"])
 
-                    results.append({
+                    row = {
                         "model": model,
                         "period": period_name,
                         "scenario": exp,
@@ -171,8 +291,40 @@ def main():
                         "R_annual": R_dict["R_annual"],
                         "R_djf": R_dict["R_djf"],
                         "D": D,
+                        "eady_dry": np.nan,
+                        "eady_moist": np.nan,
+                        "eady_ratio": np.nan,
+                        "Ld_mean_km": np.nan,
+                        "Ks_250": np.nan,
                         "label": period_cfg["label"],
-                    })
+                    }
+
+                    # Compute Eady and wave diagnostics if ua is available
+                    if ds_ua is not None:
+                        try:
+                            eady = compute_eady(ds_ta, ds_ua, cfg)
+                            row["eady_dry"] = eady["eady_dry"]
+                            row["eady_moist"] = eady["eady_moist"]
+                            row["eady_ratio"] = eady["eady_ratio"]
+                            logger.info("  Eady: dry=%.3f, moist=%.3f, F=%.3f",
+                                        eady["eady_dry"], eady["eady_moist"],
+                                        eady["eady_ratio"])
+                        except Exception as e:
+                            logger.warning("  Eady computation failed: %s", e)
+
+                        try:
+                            waves = compute_waves(ds_ta, ds_ua, cfg,
+                                                  R_dict["sigma_bar"])
+                            row["Ld_mean_km"] = waves["Ld_mean_km"]
+                            row["Ks_250"] = waves["Ks_250"]
+                            logger.info("  Waves: Ld=%.0f km, K_s²=%.2e",
+                                        waves["Ld_mean_km"], waves["Ks_250"])
+                        except Exception as e:
+                            logger.warning("  Wave diagnostics failed: %s", e)
+                    else:
+                        logger.info("  No ua data — skipping Eady and wave diagnostics")
+
+                    results.append(row)
                     logger.info("  R_annual=%.4f, R_djf=%.4f, D=%.4f",
                                 R_dict["R_annual"], R_dict["R_djf"], D)
 
@@ -183,6 +335,8 @@ def main():
                 finally:
                     ds_ta.close()
                     ds_pr.close()
+                    if ds_ua is not None:
+                        ds_ua.close()
 
     # Save results
     df = pd.DataFrame(results)
@@ -192,6 +346,15 @@ def main():
     if len(df) > 0:
         summary = df.groupby(["scenario", "period"])[["R", "D"]].agg(["mean", "std", "count"])
         logger.info("\nSummary:\n%s", summary.to_string())
+        # Also report Eady and wave diagnostics where available
+        eady_cols = ["eady_dry", "eady_moist", "eady_ratio", "Ld_mean_km", "Ks_250"]
+        df_eady = df.dropna(subset=["eady_dry"])
+        if len(df_eady) > 0:
+            eady_summary = df_eady.groupby(["scenario", "period"])[eady_cols].agg(
+                ["mean", "std", "count"])
+            logger.info("\nEady/Wave Summary:\n%s", eady_summary.to_string())
+        else:
+            logger.info("No models had ua data for Eady/wave diagnostics")
     else:
         logger.warning("No diagnostics computed!")
 

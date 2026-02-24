@@ -3,10 +3,14 @@
 
 For each model × experiment × variable, this script:
   1. Opens the Pangeo CMIP6 Zarr catalog
-  2. Loads ta and pr lazily
+  2. Loads ta, pr, and ua lazily
   3. Subsets to 55-90°N (wider for meridional gradient) and pressure levels
   4. Slices to the required time periods
   5. Saves processed NetCDF files to data/processed/
+
+Note: ua (eastward wind) is downloaded separately from ta/pr because not all
+models provide it. Models lacking ua will simply have no ua files, and downstream
+diagnostics (Eady growth rate, refractive index) will gracefully skip them.
 """
 
 import logging
@@ -135,6 +139,75 @@ def main():
                             model, exp, var, period_name, e
                         )
                         continue
+
+    # ── Download ua (eastward wind) separately ──
+    # ua is not required for R/D, so we download it for all models that
+    # have it without constraining the ta/pr model intersection.
+    logger.info("=" * 60)
+    logger.info("Downloading ua (eastward wind on pressure levels)...")
+    logger.info("=" * 60)
+
+    for model in cfg["models"]:
+        for exp in cfg["experiments"]:
+            periods_to_process = []
+            for period_name, period_cfg in cfg["periods"].items():
+                mapping = cfg["period_experiment"][period_name]
+                if isinstance(mapping, list):
+                    if exp in mapping:
+                        periods_to_process.append((period_name, period_cfg))
+                elif mapping == exp:
+                    periods_to_process.append((period_name, period_cfg))
+
+            if not periods_to_process:
+                continue
+
+            # Check if all ua periods already exist
+            all_exist = all(
+                (out_dir / f"{model}_{exp}_ua_{pn}.nc").exists()
+                for pn, _ in periods_to_process
+            )
+            if all_exist:
+                logger.info("Skipping %s/%s/ua (all periods exist)", model, exp)
+                continue
+
+            logger.info("=== %s / %s / ua ===", model, exp)
+
+            try:
+                ds = try_load(catalog, "ua", exp, model)
+            except (ValueError, KeyError) as e:
+                logger.warning("Skipping %s/%s/ua: %s", model, exp, e)
+                continue
+
+            for period_name, period_cfg in periods_to_process:
+                out_path = out_dir / f"{model}_{exp}_ua_{period_name}.nc"
+                if out_path.exists():
+                    logger.info("  %s already exists, skipping", out_path.name)
+                    continue
+
+                logger.info("  Period: %s", period_name)
+
+                try:
+                    ds_period = select_period(
+                        ds, period_cfg["start"], period_cfg["end"]
+                    )
+                    # ua is on pressure levels like ta
+                    ds_sub = subset_arctic(
+                        ds_period, lat_min_download, lat_max_download,
+                    )
+                    ds_sub = select_pressure_layer(
+                        ds_sub,
+                        cfg["pressure"]["full_range_top"],
+                        cfg["pressure"]["full_range_bot"],
+                    )
+                    ds_sub.to_netcdf(out_path)
+                    logger.info("  Saved: %s", out_path)
+
+                except Exception as e:
+                    logger.error(
+                        "  Failed %s/%s/ua/%s: %s",
+                        model, exp, period_name, e
+                    )
+                    continue
 
     logger.info("Download and preprocessing complete.")
 
