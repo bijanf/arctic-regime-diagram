@@ -1,6 +1,7 @@
 # Data directories (large files, not tracked)
 data/raw/
 data/processed/
+data/processed_regridded/
 data/diagnostics/
 data/reanalysis/
 
@@ -34,4 +35,6 @@ Thumbs.db
 figures/*.pdf
 figures/*.svg
 !figures/regime_diagram.png
+!figures/eady_growth_rate.png
+!figures/wave_diagnostics.png
 !figures/.gitkeep
