@@ -47,6 +47,9 @@ def main():
     plot_cfg = cfg["plot"]
     output_path = PROJECT_ROOT / "figures" / f"regime_diagram.{plot_cfg['format']}"
 
+    # Models to exclude from analysis (quality filters)
+    exclude = {"MCM-UA-1-0", "MPI-ESM1-2-HR"}
+
     fig = plot_regime_diagram(
         df,
         output_path=output_path,
@@ -55,7 +58,9 @@ def main():
         D_range=tuple(plot_cfg["D_range"]),
         R_threshold=plot_cfg["R_threshold"],
         D_threshold=plot_cfg["D_threshold"],
+        show_model_trajectories=True,
         df_reanalysis=df_rean,
+        exclude_models=exclude,
     )
 
     # Also save PNG for quick preview

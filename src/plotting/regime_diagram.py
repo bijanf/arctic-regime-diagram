@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
+from scipy.stats import pearsonr
 
 from .style import (
     apply_style, SCENARIO_COLORS, PERIOD_MARKERS, PERIOD_LABELS,
@@ -30,7 +31,9 @@ def plot_regime_diagram(
     D_threshold: float = 1.0,
     show_trajectories: bool = True,
     show_multi_model_mean: bool = True,
+    show_model_trajectories: bool = False,
     df_reanalysis: pd.DataFrame | None = None,
+    exclude_models: set | None = None,
 ) -> plt.Figure:
     """Create the 4-quadrant regime diagram.
 
@@ -53,12 +56,25 @@ def plot_regime_diagram(
         If True, draw arrows connecting multi-model means across periods.
     show_multi_model_mean : bool
         If True, plot large markers for the multi-model mean.
+    show_model_trajectories : bool
+        If True, draw thin arrows for each model's hist→mid→end trajectory.
+    df_reanalysis : pd.DataFrame or None
+        Reanalysis trajectory data.
+    exclude_models : set or None
+        Model names to exclude from the plot.
 
     Returns
     -------
     fig : matplotlib.figure.Figure
     """
     apply_style()
+
+    # Apply model exclusion filter
+    if exclude_models:
+        df = df[~df["model"].isin(exclude_models)].copy()
+        logger.info("Excluded models: %s (%d rows remaining)",
+                    exclude_models, len(df))
+
     fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     # --- Quadrant shading ---
@@ -122,9 +138,16 @@ def plot_regime_diagram(
         if show_trajectories:
             _plot_trajectories(ax, means, zorder=4)
 
+    # --- Individual model trajectories (SSP5-8.5 only) ---
+    if show_model_trajectories:
+        _plot_model_trajectories(ax, df, zorder=1)
+
     # --- Reanalysis trajectories ---
     if df_reanalysis is not None and len(df_reanalysis) > 0:
         _plot_reanalysis(ax, df_reanalysis, zorder=6)
+
+    # --- R-D correlation annotation ---
+    _annotate_RD_correlation(ax, df)
 
     # --- Legend ---
     _add_legend(ax, df_reanalysis=df_reanalysis)
@@ -269,6 +292,64 @@ def _plot_reanalysis(ax, df_rean, zorder=6):
                 ),
                 zorder=zorder,
             )
+
+
+def _plot_model_trajectories(ax, df, zorder=1):
+    """Draw thin semi-transparent arrows for each model's hist→mid→end trajectory.
+
+    Only SSP5-8.5 is shown to avoid clutter.
+    """
+    scenario = "ssp585"
+    color = SCENARIO_COLORS[scenario]
+
+    models = df["model"].unique()
+    for model in models:
+        points = {}
+        # Historical point
+        hist = df[(df["model"] == model) & (df["scenario"] == "historical")
+                  & (df["period"] == "historical")]
+        if len(hist) > 0:
+            points["historical"] = (hist.iloc[0]["R"], hist.iloc[0]["D"])
+
+        for period in ["mid_century", "end_century"]:
+            sub = df[(df["model"] == model) & (df["scenario"] == scenario)
+                     & (df["period"] == period)]
+            if len(sub) > 0:
+                points[period] = (sub.iloc[0]["R"], sub.iloc[0]["D"])
+
+        # Draw arrows along trajectory
+        trajectory = ["historical", "mid_century", "end_century"]
+        for i in range(len(trajectory) - 1):
+            if trajectory[i] in points and trajectory[i + 1] in points:
+                x0, y0 = points[trajectory[i]]
+                x1, y1 = points[trajectory[i + 1]]
+                if np.isfinite([x0, y0, x1, y1]).all():
+                    ax.annotate(
+                        "", xy=(x1, y1), xytext=(x0, y0),
+                        arrowprops=dict(
+                            arrowstyle="-|>",
+                            color=color,
+                            lw=0.3,
+                            alpha=0.12,
+                            mutation_scale=6,
+                        ),
+                        zorder=zorder,
+                    )
+
+
+def _annotate_RD_correlation(ax, df):
+    """Add R-D Pearson correlation annotation to the regime diagram."""
+    valid = df.dropna(subset=["R", "D"])
+    if len(valid) < 5:
+        return
+    r_corr, p_corr = pearsonr(valid["R"], valid["D"])
+    p_str = f"p = {p_corr:.1e}" if p_corr >= 0.001 else "p < 0.001"
+    ax.text(0.98, 0.02, f"r(R, D) = {r_corr:.2f}, {p_str}",
+            transform=ax.transAxes, fontsize=6, ha="right", va="bottom",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="#cccccc", alpha=0.8))
+    logger.info("R-D correlation: r = %.3f, p = %.2e, n = %d",
+                r_corr, p_corr, len(valid))
 
 
 def _add_legend(ax, df_reanalysis=None):

@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Quality filters
-EXCLUDE_MODELS = {"MCM-UA-1-0"}
+EXCLUDE_MODELS = {"MCM-UA-1-0", "MPI-ESM1-2-HR"}
 R_MAX = 1.5
 
 # All scenario/period groups for panel (a) — includes historical

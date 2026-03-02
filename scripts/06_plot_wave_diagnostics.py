@@ -5,7 +5,7 @@ Two-panel figure:
   (a) Raincloud: K_s² % change relative to historical, with significance
       asterisks from Wilcoxon signed-rank test.
   (b) Scatter: historical R vs ΔKs² (%), emergent-constraint style
-      with OLS regression line and Pearson correlation.
+      with Theil-Sen robust regression line, Pearson and Spearman correlations.
 """
 
 import logging
@@ -173,19 +173,37 @@ def plot_wave_figure(df: pd.DataFrame, output_path: Path):
             all_r_vals.extend(r_pts)
             all_dks_vals.extend(dks_pts)
 
-    # Pooled OLS regression line + Pearson stats
+    # Pooled robust regression (Theil-Sen) + Pearson & Spearman stats
     if len(all_r_vals) >= 5:
         all_r_arr = np.array(all_r_vals)
         all_dks_arr = np.array(all_dks_vals)
-        slope, intercept, r_val, p_val, _ = sp_stats.linregress(all_r_arr, all_dks_arr)
+
+        # Pearson (parametric)
+        slope_ols, intercept_ols, r_val, p_val_pearson, _ = sp_stats.linregress(
+            all_r_arr, all_dks_arr)
+
+        # Spearman (rank-based, robust to outliers)
+        rho_sp, p_val_spearman = sp_stats.spearmanr(all_r_arr, all_dks_arr)
+
+        # Theil-Sen robust regression line
+        ts_slope, ts_intercept, _, _ = sp_stats.theilslopes(
+            all_dks_arr, all_r_arr)
         x_fit = np.linspace(all_r_arr.min(), all_r_arr.max(), 100)
-        ax.plot(x_fit, slope * x_fit + intercept,
+        ax.plot(x_fit, ts_slope * x_fit + ts_intercept,
                 color="black", lw=1.0, ls="--", zorder=3)
-        p_str = f"p = {p_val:.1e}" if p_val >= 0.001 else f"p < 0.001"
-        ax.text(0.05, 0.05, f"r = {r_val:.2f}, {p_str}",
-                transform=ax.transAxes, fontsize=6.5, va="bottom")
-        logger.info("Panel (b) Pearson r = %.3f, p = %.2e, n = %d",
-                    r_val, p_val, len(all_r_arr))
+
+        # Annotation with both statistics
+        p_pear = f"p = {p_val_pearson:.2f}" if p_val_pearson >= 0.001 else "p < 0.001"
+        p_spear = f"p = {p_val_spearman:.1e}" if p_val_spearman >= 0.001 else "p < 0.001"
+        ann = (f"Pearson r = {r_val:.2f}, {p_pear}\n"
+               f"Spearman \u03c1 = {rho_sp:.2f}, {p_spear}")
+        ax.text(0.05, 0.05, ann,
+                transform=ax.transAxes, fontsize=6, va="bottom",
+                linespacing=1.4)
+        logger.info("Panel (b) Pearson r = %.3f, p = %.2e | "
+                    "Spearman rho = %.3f, p = %.2e | n = %d",
+                    r_val, p_val_pearson, rho_sp, p_val_spearman,
+                    len(all_r_arr))
 
     ax.axhline(0, color="grey", lw=0.5, ls="-", zorder=1)
     ax.set_xlabel(r"$\mathcal{R}$ (historical)", fontsize=7.5)
