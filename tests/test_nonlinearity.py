@@ -15,8 +15,7 @@ from src.physics.nonlinearity import (
 )
 
 
-def _make_sigma_dataset(n_time=120, n_lat=5, n_lon=4,
-                        mean_val=1e-5, anomaly_frac=0.1):
+def _make_sigma_dataset(n_time=120, n_lat=5, n_lon=4, mean_val=1e-5, anomaly_frac=0.1):
     """Create synthetic static stability data with known R.
 
     Parameters
@@ -105,10 +104,6 @@ class TestNonlinearityRatio:
 
     def test_R_increases_with_anomaly(self):
         """Larger anomalies should produce larger R."""
-        R_small = nonlinearity_ratio(
-            _make_sigma_dataset(anomaly_frac=0.05, n_time=2000)
-        )
-        R_large = nonlinearity_ratio(
-            _make_sigma_dataset(anomaly_frac=0.30, n_time=2000)
-        )
+        R_small = nonlinearity_ratio(_make_sigma_dataset(anomaly_frac=0.05, n_time=2000))
+        R_large = nonlinearity_ratio(_make_sigma_dataset(anomaly_frac=0.30, n_time=2000))
         assert R_large > R_small

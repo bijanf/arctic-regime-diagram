@@ -27,8 +27,7 @@ from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seas
 from src.physics.static_stability import layer_mean_stability, static_stability
 from src.physics.wave_diagnostics import compute_wave_diagnostics
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Sliding 30-year climatological windows
@@ -40,6 +39,7 @@ WINDOWS = [
 
 
 # ── Data access functions ─────────────────────────────────────────────────
+
 
 def download_ncep_r1(data_dir):
     """Download NCEP/NCAR R1 monthly means via direct HTTP.
@@ -63,8 +63,10 @@ def download_ncep_r1(data_dir):
     pr_raw = data_dir / "ncep_r1_prate.sfc.gauss.nc"
 
     if not ta_raw.exists():
-        ta_url = ("https://downloads.psl.noaa.gov/Datasets/"
-                  "ncep.reanalysis.derived/pressure/air.mon.mean.nc")
+        ta_url = (
+            "https://downloads.psl.noaa.gov/Datasets/"
+            "ncep.reanalysis.derived/pressure/air.mon.mean.nc"
+        )
         logger.info("  Downloading NCEP R1 temperature (~340 MB)...")
         urllib.request.urlretrieve(ta_url, ta_raw)
         logger.info("  Downloaded: %s", ta_raw)
@@ -72,15 +74,18 @@ def download_ncep_r1(data_dir):
     if not pr_raw.exists():
         # Try multiple URLs for precipitation
         pr_urls = [
-            ("https://downloads.psl.noaa.gov/Datasets/"
-             "ncep.reanalysis/surface_gauss/prate.sfc.gauss.mon.mean.nc"),
-            ("https://downloads.psl.noaa.gov/Datasets/"
-             "ncep.reanalysis.derived/surface_gauss/prate.sfc.mon.mean.nc"),
+            (
+                "https://downloads.psl.noaa.gov/Datasets/"
+                "ncep.reanalysis/surface_gauss/prate.sfc.gauss.mon.mean.nc"
+            ),
+            (
+                "https://downloads.psl.noaa.gov/Datasets/"
+                "ncep.reanalysis.derived/surface_gauss/prate.sfc.mon.mean.nc"
+            ),
         ]
         for url in pr_urls:
             try:
-                logger.info("  Downloading NCEP R1 precipitation from %s...",
-                            url.split("/")[-1])
+                logger.info("  Downloading NCEP R1 precipitation from %s...", url.split("/")[-1])
                 urllib.request.urlretrieve(url, pr_raw)
                 logger.info("  Downloaded: %s", pr_raw)
                 break
@@ -102,9 +107,13 @@ def download_ncep_r1(data_dir):
         ds_ta["ta"] = ds_ta["ta"] + 273.15
         logger.info("  Converted NCEP R1 ta from °C to K")
     ds_ta = ds_ta.sortby("lat").sortby("plev").load()
-    logger.info("  NCEP R1 ta: %s, T=[%.1f, %.1f] K, plev=%s",
-                dict(ds_ta.sizes), float(ds_ta["ta"].min()),
-                float(ds_ta["ta"].max()), ds_ta.plev.values.tolist())
+    logger.info(
+        "  NCEP R1 ta: %s, T=[%.1f, %.1f] K, plev=%s",
+        dict(ds_ta.sizes),
+        float(ds_ta["ta"].min()),
+        float(ds_ta["ta"].max()),
+        ds_ta.plev.values.tolist(),
+    )
 
     ds_pr = xr.open_dataset(pr_raw)
     # Gaussian grid: check lat ordering for correct subsetting
@@ -114,9 +123,12 @@ def download_ncep_r1(data_dir):
         ds_pr = ds_pr.sel(lat=slice(50, 90))  # ascending
     ds_pr = ds_pr.rename({"prate": "pr"})
     ds_pr = ds_pr.sortby("lat").load()  # force into memory
-    logger.info("  NCEP R1 pr: %s, pr=[%.2e, %.2e] kg/m²/s",
-                dict(ds_pr.sizes), float(ds_pr["pr"].min()),
-                float(ds_pr["pr"].max()))
+    logger.info(
+        "  NCEP R1 pr: %s, pr=[%.2e, %.2e] kg/m²/s",
+        dict(ds_pr.sizes),
+        float(ds_pr["pr"].min()),
+        float(ds_pr["pr"].max()),
+    )
 
     # Save Arctic subset for fast re-runs
     ds_ta.to_netcdf(ta_cache)
@@ -141,8 +153,10 @@ def download_ncep_r1_ua(data_dir):
 
     ua_raw = data_dir / "ncep_r1_uwnd.mon.mean.nc"
     if not ua_raw.exists():
-        ua_url = ("https://downloads.psl.noaa.gov/Datasets/"
-                  "ncep.reanalysis.derived/pressure/uwnd.mon.mean.nc")
+        ua_url = (
+            "https://downloads.psl.noaa.gov/Datasets/"
+            "ncep.reanalysis.derived/pressure/uwnd.mon.mean.nc"
+        )
         logger.info("  Downloading NCEP R1 u-wind (~340 MB)...")
         urllib.request.urlretrieve(ua_url, ua_raw)
         logger.info("  Downloaded: %s", ua_raw)
@@ -151,9 +165,12 @@ def download_ncep_r1_ua(data_dir):
     ds_ua = ds_ua.sel(lat=slice(90, 50), level=slice(1000, 200))
     ds_ua = ds_ua.rename({"uwnd": "ua", "level": "plev"})
     ds_ua = ds_ua.sortby("lat").sortby("plev").load()
-    logger.info("  NCEP R1 ua: %s, u=[%.1f, %.1f] m/s",
-                dict(ds_ua.sizes), float(ds_ua["ua"].min()),
-                float(ds_ua["ua"].max()))
+    logger.info(
+        "  NCEP R1 ua: %s, u=[%.1f, %.1f] m/s",
+        dict(ds_ua.sizes),
+        float(ds_ua["ua"].min()),
+        float(ds_ua["ua"].max()),
+    )
 
     ds_ua.to_netcdf(ua_cache)
     logger.info("  Cached NCEP R1 ua to %s", data_dir)
@@ -186,7 +203,7 @@ def download_era5_cds(data_dir):
                 "year": [str(y) for y in range(1959, 2024)],
                 "month": [f"{m:02d}" for m in range(1, 13)],
                 "time": ["00:00"],
-                "area": [90, -180, 50, 180],   # N, W, S, E
+                "area": [90, -180, 50, 180],  # N, W, S, E
                 "data_format": "netcdf",
             },
             str(ta_path),
@@ -278,8 +295,15 @@ def load_era5_from_files(ta_path, pr_path, ua_path=None):
     # Variable name (CDS uses avg_tprate for mean total precipitation rate)
     pr_varname = None
     for v in ds_pr.data_vars:
-        if v in ("tp", "mtpr", "avg_tprate", "total_precipitation",
-                 "mean_total_precipitation_rate", "pr", "prate"):
+        if v in (
+            "tp",
+            "mtpr",
+            "avg_tprate",
+            "total_precipitation",
+            "mean_total_precipitation_rate",
+            "pr",
+            "prate",
+        ):
             pr_varname = v
             break
     if pr_varname is None:
@@ -298,11 +322,11 @@ def load_era5_from_files(ta_path, pr_path, ua_path=None):
     if "m s" in pr_units and "kg" not in pr_units:
         # Units are m/s (meters of water per second) → convert to kg/m²/s
         ds_pr["pr"] = ds_pr["pr"] * 1000.0
-        logger.info("  Converted ERA5 pr from m/s to kg/m²/s (max=%.2e → %.2e)",
-                    pr_max, pr_max * 1000)
+        logger.info(
+            "  Converted ERA5 pr from m/s to kg/m²/s (max=%.2e → %.2e)", pr_max, pr_max * 1000
+        )
     else:
-        logger.info("  ERA5 pr already in %s (max=%.2e), no conversion needed",
-                    pr_units, pr_max)
+        logger.info("  ERA5 pr already in %s (max=%.2e), no conversion needed", pr_units, pr_max)
 
     # ERA5 pressure levels: CDS provides in hPa (300, 500, 600, 700, 850, 925, 1000)
     if "plev" in ds_ta.dims and float(ds_ta.plev.max()) > 2000:
@@ -315,12 +339,19 @@ def load_era5_from_files(ta_path, pr_path, ua_path=None):
     if "plev" in ds_ta.dims:
         ds_ta = ds_ta.sortby("plev")
 
-    logger.info("  ERA5 ta: %s, T=[%.1f, %.1f] K, plev=%s",
-                dict(ds_ta.sizes), float(ds_ta["ta"].min()),
-                float(ds_ta["ta"].max()), ds_ta.plev.values.tolist())
-    logger.info("  ERA5 pr: %s, pr=[%.2e, %.2e] kg/m²/s",
-                dict(ds_pr.sizes), float(ds_pr["pr"].min()),
-                float(ds_pr["pr"].max()))
+    logger.info(
+        "  ERA5 ta: %s, T=[%.1f, %.1f] K, plev=%s",
+        dict(ds_ta.sizes),
+        float(ds_ta["ta"].min()),
+        float(ds_ta["ta"].max()),
+        ds_ta.plev.values.tolist(),
+    )
+    logger.info(
+        "  ERA5 pr: %s, pr=[%.2e, %.2e] kg/m²/s",
+        dict(ds_pr.sizes),
+        float(ds_pr["pr"].min()),
+        float(ds_pr["pr"].max()),
+    )
 
     # ── Normalize ua dataset (optional) ──
     ds_ua = None
@@ -355,17 +386,20 @@ def load_era5_from_files(ta_path, pr_path, ua_path=None):
         ds_ua = ds_ua.sortby("lat")
         if "plev" in ds_ua.dims:
             ds_ua = ds_ua.sortby("plev")
-        logger.info("  ERA5 ua: %s, u=[%.1f, %.1f] m/s",
-                    dict(ds_ua.sizes), float(ds_ua["ua"].min()),
-                    float(ds_ua["ua"].max()))
+        logger.info(
+            "  ERA5 ua: %s, u=[%.1f, %.1f] m/s",
+            dict(ds_ua.sizes),
+            float(ds_ua["ua"].min()),
+            float(ds_ua["ua"].max()),
+        )
 
     return ds_ta, ds_pr, ds_ua
 
 
 # ── Diagnostics computation ──────────────────────────────────────────────
 
-def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
-                                    ds_ua=None, windows=None):
+
+def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name, ds_ua=None, windows=None):
     """Compute R, D, Eady, and wave diagnostics for sliding time windows.
 
     Parameters
@@ -392,28 +426,34 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
 
         # Select time window
         try:
-            ta_window = ds_ta["ta"].sel(
-                time=slice(f"{start_yr}-01", f"{end_yr}-12"))
-            pr_window = ds_pr["pr"].sel(
-                time=slice(f"{start_yr}-01", f"{end_yr}-12"))
+            ta_window = ds_ta["ta"].sel(time=slice(f"{start_yr}-01", f"{end_yr}-12"))
+            pr_window = ds_pr["pr"].sel(time=slice(f"{start_yr}-01", f"{end_yr}-12"))
         except Exception:
             # cftime or non-standard time
             ta_times = ds_ta.time.values
             pr_times = ds_pr.time.values
             ta_window = ds_ta["ta"].isel(
-                time=[i for i, t in enumerate(ta_times)
-                      if hasattr(t, 'year') and start_yr <= t.year <= end_yr])
+                time=[
+                    i
+                    for i, t in enumerate(ta_times)
+                    if hasattr(t, "year") and start_yr <= t.year <= end_yr
+                ]
+            )
             pr_window = ds_pr["pr"].isel(
-                time=[i for i, t in enumerate(pr_times)
-                      if hasattr(t, 'year') and start_yr <= t.year <= end_yr])
+                time=[
+                    i
+                    for i, t in enumerate(pr_times)
+                    if hasattr(t, "year") and start_yr <= t.year <= end_yr
+                ]
+            )
 
         if len(ta_window.time) < 12:
-            logger.warning("    Not enough data for %s (only %d months)",
-                           label, len(ta_window.time))
+            logger.warning(
+                "    Not enough data for %s (only %d months)", label, len(ta_window.time)
+            )
             continue
 
-        logger.info("    ta: %d months, pr: %d months",
-                    len(ta_window.time), len(pr_window.time))
+        logger.info("    ta: %d months, pr: %d months", len(ta_window.time), len(pr_window.time))
 
         try:
             # ── Compute R ──
@@ -438,8 +478,7 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
             lat_name = "lat"
             lat_min_avail = float(ta_window[lat_name].min())
             edge_lat_min = max(cfg["domain"]["edge_lat_min"], lat_min_avail)
-            edge_lat_max = min(cfg["domain"]["edge_lat_max"],
-                               float(ta_window[lat_name].max()))
+            edge_lat_max = min(cfg["domain"]["edge_lat_max"], float(ta_window[lat_name].max()))
 
             dT_dy = meridional_T_gradient(
                 ta_window,
@@ -459,7 +498,9 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
             )
 
             D = diabatic_number(
-                pr_arctic, dT_dy, sigma_bar,
+                pr_arctic,
+                dT_dy,
+                sigma_bar,
                 Lv=cfg["constants"]["Lv"],
                 cp=cfg["constants"]["cp"],
                 f0=cfg["constants"]["f0"],
@@ -485,18 +526,22 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
             # Compute Eady and wave diagnostics if ua is available
             if ds_ua is not None:
                 try:
-                    ua_window = ds_ua["ua"].sel(
-                        time=slice(f"{start_yr}-01", f"{end_yr}-12"))
+                    ua_window = ds_ua["ua"].sel(time=slice(f"{start_yr}-01", f"{end_yr}-12"))
                 except Exception:
                     ua_times = ds_ua.time.values
                     ua_window = ds_ua["ua"].isel(
-                        time=[i for i, t in enumerate(ua_times)
-                              if hasattr(t, 'year') and start_yr <= t.year <= end_yr])
+                        time=[
+                            i
+                            for i, t in enumerate(ua_times)
+                            if hasattr(t, "year") and start_yr <= t.year <= end_yr
+                        ]
+                    )
 
                 if len(ua_window.time) >= 12:
                     try:
                         eady = compute_eady_diagnostics(
-                            ua_window, ta_window,
+                            ua_window,
+                            ta_window,
                             lat_min=cfg["domain"]["arctic_lat_min"],
                             lat_max=cfg["domain"]["arctic_lat_max"],
                             p_top=cfg["pressure"]["layer_top"],
@@ -510,7 +555,9 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
 
                     try:
                         waves = compute_wave_diagnostics(
-                            ua_window, ta_window, sigma_bar,
+                            ua_window,
+                            ta_window,
+                            sigma_bar,
                             lat_min=cfg["domain"]["arctic_lat_min"],
                             lat_max=cfg["domain"]["arctic_lat_max"],
                             p_top=cfg["pressure"]["layer_top"],
@@ -523,12 +570,12 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
                         logger.warning("    Wave diagnostics failed: %s", e)
 
             results.append(row)
-            logger.info("    R_annual=%.4f, R_djf=%.4f, D=%.4f",
-                        R_annual, R_djf, D)
+            logger.info("    R_annual=%.4f, R_djf=%.4f, D=%.4f", R_annual, R_djf, D)
 
         except Exception as e:
             logger.error("    Failed for %s %s: %s", dataset_name, label, e)
             import traceback
+
             traceback.print_exc()
             continue
 
@@ -536,6 +583,7 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name,
 
 
 # ── Main pipeline ────────────────────────────────────────────────────────
+
 
 def main():
     cfg = load_config()
@@ -560,7 +608,10 @@ def main():
             logger.warning("NCEP R1 ua download failed (non-fatal): %s", e)
 
         results_ncep = compute_reanalysis_diagnostics(
-            ds_ta_ncep, ds_pr_ncep, cfg, "NCEP-R1",
+            ds_ta_ncep,
+            ds_pr_ncep,
+            cfg,
+            "NCEP-R1",
             ds_ua=ds_ua_ncep,
             windows=WINDOWS,
         )
@@ -569,6 +620,7 @@ def main():
     except Exception as e:
         logger.error("NCEP R1 failed: %s", e)
         import traceback
+
         traceback.print_exc()
 
     # ── 2. ERA5 via CDS API ──
@@ -577,10 +629,12 @@ def main():
     logger.info("=" * 60)
     try:
         ta_path, pr_path, ua_path = download_era5_cds(data_dir)
-        ds_ta_era5, ds_pr_era5, ds_ua_era5 = load_era5_from_files(
-            ta_path, pr_path, ua_path)
+        ds_ta_era5, ds_pr_era5, ds_ua_era5 = load_era5_from_files(ta_path, pr_path, ua_path)
         results_era5 = compute_reanalysis_diagnostics(
-            ds_ta_era5, ds_pr_era5, cfg, "ERA5",
+            ds_ta_era5,
+            ds_pr_era5,
+            cfg,
+            "ERA5",
             ds_ua=ds_ua_era5,
             windows=WINDOWS,
         )
@@ -589,6 +643,7 @@ def main():
     except Exception as e:
         logger.error("ERA5 CDS failed: %s", e)
         import traceback
+
         traceback.print_exc()
 
     # ── Save results ──

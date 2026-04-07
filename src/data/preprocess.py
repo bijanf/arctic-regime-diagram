@@ -8,8 +8,7 @@ import xarray as xr
 logger = logging.getLogger(__name__)
 
 
-def subset_arctic(ds: xr.Dataset, lat_min: float = 60.0,
-                  lat_max: float = 90.0) -> xr.Dataset:
+def subset_arctic(ds: xr.Dataset, lat_min: float = 60.0, lat_max: float = 90.0) -> xr.Dataset:
     """Select latitudes within the Arctic band.
 
     Handles both ascending and descending latitude coordinates, and
@@ -36,8 +35,7 @@ def subset_arctic(ds: xr.Dataset, lat_min: float = 60.0,
     return ds.sel({lat_name: slice(lat_min, lat_max)})
 
 
-def subset_edge(ds: xr.Dataset, lat_min: float = 55.0,
-                lat_max: float = 65.0) -> xr.Dataset:
+def subset_edge(ds: xr.Dataset, lat_min: float = 55.0, lat_max: float = 65.0) -> xr.Dataset:
     """Select the Arctic-edge latitude band for meridional gradients."""
     lat_name = _get_lat_name(ds)
     lat_vals = ds[lat_name].values
@@ -64,8 +62,7 @@ def select_period(ds: xr.Dataset, start: str, end: str) -> xr.Dataset:
     return ds.sel({time_name: slice(start, end)})
 
 
-def select_pressure_layer(ds: xr.Dataset, p_top: float,
-                          p_bot: float) -> xr.Dataset:
+def select_pressure_layer(ds: xr.Dataset, p_top: float, p_bot: float) -> xr.Dataset:
     """Select pressure levels between p_top and p_bot (hPa).
 
     Handles both ascending and descending pressure coordinates.
@@ -108,8 +105,9 @@ def area_weights(ds: xr.Dataset) -> xr.DataArray:
     return weights
 
 
-def regrid_to_common(ds: xr.Dataset, target_res: float = 2.0,
-                     method: str = "bilinear") -> xr.Dataset:
+def regrid_to_common(
+    ds: xr.Dataset, target_res: float = 2.0, method: str = "bilinear"
+) -> xr.Dataset:
     """Regrid a dataset to a regular lat-lon grid using xESMF.
 
     Parameters
@@ -134,10 +132,12 @@ def regrid_to_common(ds: xr.Dataset, target_res: float = 2.0,
     # Build target grid
     lat_out = np.arange(-90 + target_res / 2, 90, target_res)
     lon_out = np.arange(0 + target_res / 2, 360, target_res)
-    ds_out = xr.Dataset({
-        "lat": (["lat"], lat_out),
-        "lon": (["lon"], lon_out),
-    })
+    ds_out = xr.Dataset(
+        {
+            "lat": (["lat"], lat_out),
+            "lon": (["lon"], lon_out),
+        }
+    )
 
     # Rename to standard names for xESMF
     rename_map = {}
@@ -154,6 +154,7 @@ def regrid_to_common(ds: xr.Dataset, target_res: float = 2.0,
 
 
 # --- Coordinate name helpers ---
+
 
 def _get_lat_name(ds: xr.Dataset) -> str:
     """Detect the latitude coordinate name."""
@@ -184,6 +185,4 @@ def _get_plev_name(ds: xr.Dataset) -> str:
     for name in ["plev", "lev", "level", "pressure", "air_pressure"]:
         if name in ds.coords or name in ds.dims:
             return name
-    raise ValueError(
-        f"Cannot find pressure coordinate in {list(ds.coords)}"
-    )
+    raise ValueError(f"Cannot find pressure coordinate in {list(ds.coords)}")

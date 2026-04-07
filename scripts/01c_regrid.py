@@ -22,15 +22,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.config import load_config
 from src.data.preprocess import _get_lat_name, _get_lon_name
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Target grid: 2° resolution, 50-90°N (wide enough for Eady at 50-70°N
 # and wave diagnostics at 55-75°N)
 TARGET_RES = 2.0
 TARGET_LAT = np.arange(50.0, 91.0, TARGET_RES)  # 50, 52, ..., 90
-TARGET_LON = np.arange(0.0, 360.0, TARGET_RES)   # 0, 2, ..., 358
+TARGET_LON = np.arange(0.0, 360.0, TARGET_RES)  # 0, 2, ..., 358
 
 
 def regrid_file(src_path: Path, dst_path: Path) -> bool:
@@ -62,8 +61,10 @@ def regrid_file(src_path: Path, dst_path: Path) -> bool:
 
     # Squeeze singleton dimensions
     for dim in list(ds.dims):
-        if dim not in ("time", "plev", "lev", "lat", "lon",
-                        "latitude", "longitude") and ds.sizes[dim] == 1:
+        if (
+            dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude")
+            and ds.sizes[dim] == 1
+        ):
             ds = ds.squeeze(dim, drop=True)
 
     # Validate
@@ -92,16 +93,18 @@ def regrid_file(src_path: Path, dst_path: Path) -> bool:
     # Only include target lats within the source data range (with 1° margin)
     lat_min_src = src_lat.min()
     lat_max_src = src_lat.max()
-    target_lat = TARGET_LAT[(lat_min_src + 1.0 <= TARGET_LAT) &
-                             (lat_max_src - 1.0 >= TARGET_LAT)]
+    target_lat = TARGET_LAT[(lat_min_src + 1.0 <= TARGET_LAT) & (lat_max_src - 1.0 >= TARGET_LAT)]
     if len(target_lat) == 0:
         # Fall back: use all target points within source range
-        target_lat = TARGET_LAT[(lat_min_src <= TARGET_LAT) &
-                                 (lat_max_src >= TARGET_LAT)]
+        target_lat = TARGET_LAT[(lat_min_src <= TARGET_LAT) & (lat_max_src >= TARGET_LAT)]
 
     if len(target_lat) == 0:
-        logger.warning("No target lat points within source range [%.1f, %.1f]: %s",
-                        lat_min_src, lat_max_src, src_path)
+        logger.warning(
+            "No target lat points within source range [%.1f, %.1f]: %s",
+            lat_min_src,
+            lat_max_src,
+            src_path,
+        )
         ds.close()
         return False
 
@@ -158,8 +161,9 @@ def main():
 
         # Skip known corrupt files
         if src_path.stat().st_size < 1024:
-            logger.warning("Skipping small file (%d bytes): %s",
-                            src_path.stat().st_size, src_path.name)
+            logger.warning(
+                "Skipping small file (%d bytes): %s", src_path.stat().st_size, src_path.name
+            )
             failed += 1
             continue
 
@@ -170,8 +174,7 @@ def main():
         else:
             failed += 1
 
-    logger.info("Regridding complete: %d success, %d failed, %d skipped",
-                success, failed, skipped)
+    logger.info("Regridding complete: %d success, %d failed, %d skipped", success, failed, skipped)
 
     # Verify: check that all regridded files have the same grid
     regridded_files = sorted(dst_dir.glob("*.nc"))
@@ -180,10 +183,15 @@ def main():
         lat_check = ds_check["lat"].values
         lon_check = ds_check["lon"].values
         ds_check.close()
-        logger.info("Target grid: %d lat × %d lon (lat=[%.0f, %.0f], lon=[%.0f, %.0f])",
-                    len(lat_check), len(lon_check),
-                    lat_check.min(), lat_check.max(),
-                    lon_check.min(), lon_check.max())
+        logger.info(
+            "Target grid: %d lat × %d lon (lat=[%.0f, %.0f], lon=[%.0f, %.0f])",
+            len(lat_check),
+            len(lon_check),
+            lat_check.min(),
+            lat_check.max(),
+            lon_check.min(),
+            lon_check.max(),
+        )
 
 
 if __name__ == "__main__":

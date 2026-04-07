@@ -15,8 +15,7 @@ import xarray as xr
 from ..data.preprocess import _get_lat_name, area_weights
 
 
-def climatological_mean(sigma: xr.DataArray,
-                        time_dim: str = "time") -> xr.DataArray:
+def climatological_mean(sigma: xr.DataArray, time_dim: str = "time") -> xr.DataArray:
     """Compute the time-mean static stability σ̄.
 
     Parameters
@@ -34,8 +33,7 @@ def climatological_mean(sigma: xr.DataArray,
     return sigma.mean(dim=time_dim)
 
 
-def monthly_anomalies(sigma: xr.DataArray,
-                      time_dim: str = "time") -> xr.DataArray:
+def monthly_anomalies(sigma: xr.DataArray, time_dim: str = "time") -> xr.DataArray:
     """Compute monthly anomalies σ' = σ - σ̄.
 
     Parameters
@@ -54,8 +52,7 @@ def monthly_anomalies(sigma: xr.DataArray,
     return sigma - sigma_bar
 
 
-def nonlinearity_ratio(sigma: xr.DataArray,
-                       time_dim: str = "time") -> float:
+def nonlinearity_ratio(sigma: xr.DataArray, time_dim: str = "time") -> float:
     """Compute the nonlinearity ratio R including spatio-temporal variability.
 
     R = sqrt(<σ'²>_space,time) / <σ̄>_space
@@ -91,7 +88,7 @@ def nonlinearity_ratio(sigma: xr.DataArray,
     sigma_prime = sigma - sigma_bar_domain
 
     # RMS of departures (area-weighted, then time-averaged)
-    sigma_prime_sq = sigma_prime ** 2
+    sigma_prime_sq = sigma_prime**2
     # Area-weighted spatial mean of σ'² at each timestep
     variance_t = (sigma_prime_sq * weights).sum(dim=lat_name).mean(dim="lon")
     # Time-mean variance
@@ -122,9 +119,7 @@ def nonlinearity_ratio_seasonal(
         Seasonal nonlinearity ratio R.
     """
     # Select season
-    sigma_season = sigma.sel(
-        {time_dim: sigma[time_dim].dt.season == season}
-    )
+    sigma_season = sigma.sel({time_dim: sigma[time_dim].dt.season == season})
     if sigma_season.sizes[time_dim] == 0:
         return float("nan")
     return nonlinearity_ratio(sigma_season, time_dim=time_dim)

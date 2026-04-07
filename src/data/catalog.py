@@ -8,9 +8,7 @@ import intake
 
 logger = logging.getLogger(__name__)
 
-PANGEO_CATALOG_URL = (
-    "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
-)
+PANGEO_CATALOG_URL = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
 
 
 def open_catalog():
@@ -126,9 +124,8 @@ def find_common_models(
                 table_id=table_id,
                 grid_label="gr",
             )
-            models_here = (
-                set(sub_gn.df["source_id"].unique())
-                | set(sub_gr.df["source_id"].unique())
+            models_here = set(sub_gn.df["source_id"].unique()) | set(
+                sub_gr.df["source_id"].unique()
             )
             available = models_here if available is None else available & models_here
 

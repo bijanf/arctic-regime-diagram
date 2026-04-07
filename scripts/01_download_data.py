@@ -30,8 +30,7 @@ from src.data.preprocess import (
     subset_arctic,
 )
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Members to try in order for each model
@@ -111,13 +110,13 @@ def main():
                     logger.info("  Period: %s", period_name)
 
                     try:
-                        ds_period = select_period(
-                            ds, period_cfg["start"], period_cfg["end"]
-                        )
+                        ds_period = select_period(ds, period_cfg["start"], period_cfg["end"])
 
                         if var == "ta":
                             ds_sub = subset_arctic(
-                                ds_period, lat_min_download, lat_max_download,
+                                ds_period,
+                                lat_min_download,
+                                lat_max_download,
                             )
                             ds_sub = select_pressure_layer(
                                 ds_sub,
@@ -126,7 +125,9 @@ def main():
                             )
                         else:
                             ds_sub = subset_arctic(
-                                ds_period, lat_min_download, lat_max_download,
+                                ds_period,
+                                lat_min_download,
+                                lat_max_download,
                             )
 
                         # Save directly (skip regridding to avoid esmpy dependency)
@@ -134,10 +135,7 @@ def main():
                         logger.info("  Saved: %s", out_path)
 
                     except Exception as e:
-                        logger.error(
-                            "  Failed %s/%s/%s/%s: %s",
-                            model, exp, var, period_name, e
-                        )
+                        logger.error("  Failed %s/%s/%s/%s: %s", model, exp, var, period_name, e)
                         continue
 
     # ── Download ua (eastward wind) separately ──
@@ -163,8 +161,7 @@ def main():
 
             # Check if all ua periods already exist
             all_exist = all(
-                (out_dir / f"{model}_{exp}_ua_{pn}.nc").exists()
-                for pn, _ in periods_to_process
+                (out_dir / f"{model}_{exp}_ua_{pn}.nc").exists() for pn, _ in periods_to_process
             )
             if all_exist:
                 logger.info("Skipping %s/%s/ua (all periods exist)", model, exp)
@@ -187,12 +184,12 @@ def main():
                 logger.info("  Period: %s", period_name)
 
                 try:
-                    ds_period = select_period(
-                        ds, period_cfg["start"], period_cfg["end"]
-                    )
+                    ds_period = select_period(ds, period_cfg["start"], period_cfg["end"])
                     # ua is on pressure levels like ta
                     ds_sub = subset_arctic(
-                        ds_period, lat_min_download, lat_max_download,
+                        ds_period,
+                        lat_min_download,
+                        lat_max_download,
                     )
                     ds_sub = select_pressure_layer(
                         ds_sub,
@@ -203,10 +200,7 @@ def main():
                     logger.info("  Saved: %s", out_path)
 
                 except Exception as e:
-                    logger.error(
-                        "  Failed %s/%s/ua/%s: %s",
-                        model, exp, period_name, e
-                    )
+                    logger.error("  Failed %s/%s/ua/%s: %s", model, exp, period_name, e)
                     continue
 
     logger.info("Download and preprocessing complete.")

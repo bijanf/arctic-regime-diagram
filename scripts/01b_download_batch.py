@@ -13,8 +13,7 @@ from src.config import load_config
 from src.data.catalog import open_catalog, search_catalog
 from src.data.preprocess import select_period, select_pressure_layer, subset_arctic
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 MEMBER_ATTEMPTS = ["r1i1p1f1", "r1i1p1f2", "r1i1p1f3", "r2i1p1f1"]
@@ -34,10 +33,15 @@ def try_load_dataset(catalog, var, exp, model):
     """Try all member/grid combos to load a dataset."""
     for member in MEMBER_ATTEMPTS:
         for grid in GRID_ATTEMPTS:
-            sub = search_catalog(catalog, variable_id=var,
-                                 experiment_id=exp, source_id=model,
-                                 table_id="Amon", member_id=member,
-                                 grid_label=grid)
+            sub = search_catalog(
+                catalog,
+                variable_id=var,
+                experiment_id=exp,
+                source_id=model,
+                table_id="Amon",
+                member_id=member,
+                grid_label=grid,
+            )
             if len(sub.df) == 0:
                 continue
             try:
@@ -52,8 +56,7 @@ def try_load_dataset(catalog, var, exp, model):
                 logger.info("  Loaded %s (%s/%s)", key, member, grid)
                 return dsets[key]
             except TimeoutError:
-                logger.warning("  Timeout for %s/%s/%s/%s/%s",
-                               model, exp, var, member, grid)
+                logger.warning("  Timeout for %s/%s/%s/%s/%s", model, exp, var, member, grid)
                 signal.alarm(0)
                 continue
             except Exception:
@@ -119,8 +122,7 @@ def main():
                     signal.signal(signal.SIGALRM, timeout_handler)
                     signal.alarm(TIMEOUT_PER_DATASET)
 
-                    ds_period = select_period(ds, period_cfg["start"],
-                                              period_cfg["end"])
+                    ds_period = select_period(ds, period_cfg["start"], period_cfg["end"])
                     ds_sub = subset_arctic(ds_period, lat_min, lat_max)
                     if var == "ta":
                         ds_sub = select_pressure_layer(
@@ -133,12 +135,10 @@ def main():
                     logger.info("    Saved %s", out_path.name)
                 except TimeoutError:
                     signal.alarm(0)
-                    logger.warning("    Timeout saving %s/%s/%s",
-                                   model, exp, period_name)
+                    logger.warning("    Timeout saving %s/%s/%s", model, exp, period_name)
                 except Exception as e:
                     signal.alarm(0)
-                    logger.error("    Error %s/%s/%s: %s",
-                                 model, exp, period_name, e)
+                    logger.error("    Error %s/%s/%s: %s", model, exp, period_name, e)
 
         if model_ok:
             succeeded.append(model)
@@ -150,8 +150,7 @@ def main():
     logger.info("Failed: %d models: %s", len(failed), failed)
 
     total_files = len(list(out_dir.glob("*.nc")))
-    total_models = len(set(f.name.split("_")[0]
-                           for f in out_dir.glob("*.nc")))
+    total_models = len(set(f.name.split("_")[0] for f in out_dir.glob("*.nc")))
     logger.info("Total: %d files, %d distinct models", total_files, total_models)
 
 

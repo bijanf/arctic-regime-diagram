@@ -13,8 +13,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.config import load_config
 from src.plotting.regime_diagram import plot_regime_diagram
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 

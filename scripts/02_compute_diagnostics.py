@@ -30,13 +30,13 @@ from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seas
 from src.physics.static_stability import layer_mean_stability, static_stability
 from src.physics.wave_diagnostics import compute_wave_diagnostics
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def load_processed(model: str, exp: str, var: str,
-                   period: str, data_dir: Path) -> xr.Dataset | None:
+def load_processed(
+    model: str, exp: str, var: str, period: str, data_dir: Path
+) -> xr.Dataset | None:
     """Load a preprocessed NetCDF file, returning None if missing or corrupt."""
     fname = f"{model}_{exp}_{var}_{period}.nc"
     path = data_dir / fname
@@ -46,8 +46,7 @@ def load_processed(model: str, exp: str, var: str,
 
     # Reject files smaller than 1KB (empty shells)
     if path.stat().st_size < 1024:
-        logger.warning("Suspiciously small file (%d bytes): %s",
-                        path.stat().st_size, path)
+        logger.warning("Suspiciously small file (%d bytes): %s", path.stat().st_size, path)
         return None
 
     try:
@@ -66,8 +65,11 @@ def load_processed(model: str, exp: str, var: str,
 
     # Squeeze singleton dimensions from Pangeo (member_id, dcpp_init_year)
     for dim in list(ds.dims):
-        if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude") and ds.sizes[dim] == 1:
-                ds = ds.squeeze(dim, drop=True)
+        if (
+            dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude")
+            and ds.sizes[dim] == 1
+        ):
+            ds = ds.squeeze(dim, drop=True)
 
     # Reject files with zero time steps
     if ds.sizes.get("time", 0) == 0:
@@ -117,8 +119,9 @@ def compute_R(ds_ta: xr.Dataset, cfg: dict) -> dict:
     return {"R_annual": R_annual, "R_djf": R_djf, "sigma_bar": sigma_bar}
 
 
-def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
-              sigma_bar_value: float | None = None) -> float:
+def compute_D(
+    ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict, sigma_bar_value: float | None = None
+) -> float:
     """Compute the diabatic number D from temperature and precipitation."""
     # Temperature
     ta = ds_ta["ta"] if "ta" in ds_ta else ds_ta[list(ds_ta.data_vars)[0]]
@@ -126,8 +129,7 @@ def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
     # Meridional temperature gradient at Arctic edge
     lat_min_avail = float(ta["lat"].min())
     edge_lat_min = max(cfg["domain"]["edge_lat_min"], lat_min_avail)
-    edge_lat_max = min(cfg["domain"]["edge_lat_max"],
-                       float(ta["lat"].max()))
+    edge_lat_max = min(cfg["domain"]["edge_lat_max"], float(ta["lat"].max()))
 
     dT_dy = meridional_T_gradient(
         ta,
@@ -161,7 +163,9 @@ def compute_D(ds_ta: xr.Dataset, ds_pr: xr.Dataset, cfg: dict,
 
     # Diabatic number
     D = diabatic_number(
-        pr_arctic, dT_dy, sigma_bar_value,
+        pr_arctic,
+        dT_dy,
+        sigma_bar_value,
         Lv=cfg["constants"]["Lv"],
         cp=cfg["constants"]["cp"],
         f0=cfg["constants"]["f0"],
@@ -193,7 +197,8 @@ def compute_eady(ds_ta: xr.Dataset, ds_ua: xr.Dataset, cfg: dict) -> dict:
     # Use Eady-specific domain from config (near jet, 50-70°N)
     eady_cfg = cfg.get("eady", {})
     return compute_eady_diagnostics(
-        ua, ta,
+        ua,
+        ta,
         lat_min=eady_cfg.get("lat_min", 50.0),
         lat_max=eady_cfg.get("lat_max", 70.0),
         p_top=eady_cfg.get("p_top", cfg["pressure"]["layer_top"]),
@@ -201,8 +206,7 @@ def compute_eady(ds_ta: xr.Dataset, ds_ua: xr.Dataset, cfg: dict) -> dict:
     )
 
 
-def compute_waves(ds_ta: xr.Dataset, ds_ua: xr.Dataset,
-                  cfg: dict, sigma_bar: float) -> dict:
+def compute_waves(ds_ta: xr.Dataset, ds_ua: xr.Dataset, cfg: dict, sigma_bar: float) -> dict:
     """Compute Ld map stats and refractive index diagnostics.
 
     Parameters
@@ -227,7 +231,9 @@ def compute_waves(ds_ta: xr.Dataset, ds_ua: xr.Dataset,
     # Use wave-specific domain from config
     wave_cfg = cfg.get("wave", {})
     return compute_wave_diagnostics(
-        ua, ta, sigma_bar,
+        ua,
+        ta,
+        sigma_bar,
         lat_min=wave_cfg.get("Ld_lat_min", 55.0),
         lat_max=wave_cfg.get("Ld_lat_max", 75.0),
         p_top=cfg["pressure"]["layer_top"],
@@ -280,8 +286,7 @@ def main():
 
                 try:
                     R_dict = compute_R(ds_ta, cfg)
-                    D = compute_D(ds_ta, ds_pr, cfg,
-                                  sigma_bar_value=R_dict["sigma_bar"])
+                    D = compute_D(ds_ta, ds_pr, cfg, sigma_bar_value=R_dict["sigma_bar"])
 
                     row = {
                         "model": model,
@@ -306,27 +311,36 @@ def main():
                             row["eady_dry"] = eady["eady_dry"]
                             row["eady_moist"] = eady["eady_moist"]
                             row["eady_ratio"] = eady["eady_ratio"]
-                            logger.info("  Eady: dry=%.3f, moist=%.3f, F=%.3f",
-                                        eady["eady_dry"], eady["eady_moist"],
-                                        eady["eady_ratio"])
+                            logger.info(
+                                "  Eady: dry=%.3f, moist=%.3f, F=%.3f",
+                                eady["eady_dry"],
+                                eady["eady_moist"],
+                                eady["eady_ratio"],
+                            )
                         except Exception as e:
                             logger.warning("  Eady computation failed: %s", e)
 
                         try:
-                            waves = compute_waves(ds_ta, ds_ua, cfg,
-                                                  R_dict["sigma_bar"])
+                            waves = compute_waves(ds_ta, ds_ua, cfg, R_dict["sigma_bar"])
                             row["Ld_mean_km"] = waves["Ld_mean_km"]
                             row["Ks_250"] = waves["Ks_250"]
-                            logger.info("  Waves: Ld=%.0f km, K_s²=%.2e",
-                                        waves["Ld_mean_km"], waves["Ks_250"])
+                            logger.info(
+                                "  Waves: Ld=%.0f km, K_s²=%.2e",
+                                waves["Ld_mean_km"],
+                                waves["Ks_250"],
+                            )
                         except Exception as e:
                             logger.warning("  Wave diagnostics failed: %s", e)
                     else:
                         logger.info("  No ua data — skipping Eady and wave diagnostics")
 
                     results.append(row)
-                    logger.info("  R_annual=%.4f, R_djf=%.4f, D=%.4f",
-                                R_dict["R_annual"], R_dict["R_djf"], D)
+                    logger.info(
+                        "  R_annual=%.4f, R_djf=%.4f, D=%.4f",
+                        R_dict["R_annual"],
+                        R_dict["R_djf"],
+                        D,
+                    )
 
                 except Exception as e:
                     logger.error("  Failed: %s", e)
@@ -351,7 +365,8 @@ def main():
         df_eady = df.dropna(subset=["eady_dry"])
         if len(df_eady) > 0:
             eady_summary = df_eady.groupby(["scenario", "period"])[eady_cols].agg(
-                ["mean", "std", "count"])
+                ["mean", "std", "count"]
+            )
             logger.info("\nEady/Wave Summary:\n%s", eady_summary.to_string())
         else:
             logger.info("No models had ua data for Eady/wave diagnostics")

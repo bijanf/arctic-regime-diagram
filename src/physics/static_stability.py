@@ -13,15 +13,15 @@ import xarray as xr
 from ..data.preprocess import _get_plev_name
 
 # Default physical constants
-RD = 287.05      # J/(kg·K)
-CP = 1004.0      # J/(kg·K)
+RD = 287.05  # J/(kg·K)
+CP = 1004.0  # J/(kg·K)
 KAPPA = RD / CP  # ~0.2854
-P0 = 1000.0      # hPa reference pressure
+P0 = 1000.0  # hPa reference pressure
 
 
-def potential_temperature(T: xr.DataArray, plev_hPa: xr.DataArray,
-                          p0: float = P0,
-                          kappa: float = KAPPA) -> xr.DataArray:
+def potential_temperature(
+    T: xr.DataArray, plev_hPa: xr.DataArray, p0: float = P0, kappa: float = KAPPA
+) -> xr.DataArray:
     """Compute potential temperature θ = T·(p₀/p)^κ.
 
     Parameters
@@ -47,9 +47,13 @@ def potential_temperature(T: xr.DataArray, plev_hPa: xr.DataArray,
     return theta
 
 
-def static_stability(T: xr.DataArray, plev_name: str | None = None,
-                     Rd: float = RD, kappa: float = KAPPA,
-                     p0: float = P0) -> xr.DataArray:
+def static_stability(
+    T: xr.DataArray,
+    plev_name: str | None = None,
+    Rd: float = RD,
+    kappa: float = KAPPA,
+    p0: float = P0,
+) -> xr.DataArray:
     """Compute static stability σ(p).
 
     σ = -(Rd·T) / (p·θ) · (∂θ/∂p)
@@ -106,8 +110,9 @@ def static_stability(T: xr.DataArray, plev_name: str | None = None,
     return sigma
 
 
-def layer_mean_stability(sigma: xr.DataArray, p_top: float = 500.0,
-                         p_bot: float = 850.0) -> xr.DataArray:
+def layer_mean_stability(
+    sigma: xr.DataArray, p_top: float = 500.0, p_bot: float = 850.0
+) -> xr.DataArray:
     """Average static stability over a pressure layer using dp-weighting.
 
     Uses pressure-thickness (dp) weights instead of a simple mean, which
@@ -152,8 +157,7 @@ def layer_mean_stability(sigma: xr.DataArray, p_top: float = 500.0,
         return layer.mean(dim=plev_name)
 
     dp = np.abs(np.gradient(layer_plev))
-    dp_weights = xr.DataArray(dp, dims=[plev_name],
-                               coords={plev_name: layer_plev})
+    dp_weights = xr.DataArray(dp, dims=[plev_name], coords={plev_name: layer_plev})
     dp_weights = dp_weights / dp_weights.sum()
 
     return (layer * dp_weights).sum(dim=plev_name)

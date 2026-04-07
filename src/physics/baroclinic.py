@@ -24,11 +24,11 @@ from .static_stability import layer_mean_stability, static_stability
 logger = logging.getLogger(__name__)
 
 # Physical constants
-OMEGA = 7.2921e-5   # rad/s, Earth rotation rate
-G = 9.81             # m/s²
-RD = 287.05          # J/(kg·K), dry air gas constant
-CP = 1004.0          # J/(kg·K), specific heat at constant pressure
-LV = 2.501e6         # J/kg, latent heat of vaporization
+OMEGA = 7.2921e-5  # rad/s, Earth rotation rate
+G = 9.81  # m/s²
+RD = 287.05  # J/(kg·K), dry air gas constant
+CP = 1004.0  # J/(kg·K), specific heat at constant pressure
+LV = 2.501e6  # J/kg, latent heat of vaporization
 
 
 def coriolis_parameter(lat: xr.DataArray) -> xr.DataArray:
@@ -47,8 +47,9 @@ def coriolis_parameter(lat: xr.DataArray) -> xr.DataArray:
     return 2.0 * OMEGA * np.sin(np.deg2rad(lat))
 
 
-def brunt_vaisala_from_sigma(sigma: xr.DataArray, T: xr.DataArray,
-                              plev_name: str | None = None) -> xr.DataArray:
+def brunt_vaisala_from_sigma(
+    sigma: xr.DataArray, T: xr.DataArray, plev_name: str | None = None
+) -> xr.DataArray:
     """Compute Brunt-Väisälä frequency N from static stability σ and T.
 
     From the relation:
@@ -91,8 +92,9 @@ def brunt_vaisala_from_sigma(sigma: xr.DataArray, T: xr.DataArray,
     return N
 
 
-def vertical_wind_shear(ua: xr.DataArray, T: xr.DataArray,
-                         plev_name: str | None = None) -> xr.DataArray:
+def vertical_wind_shear(
+    ua: xr.DataArray, T: xr.DataArray, plev_name: str | None = None
+) -> xr.DataArray:
     """Compute vertical wind shear ∂u/∂z from ua on pressure levels.
 
     Uses the hydrostatic relation:
@@ -137,9 +139,13 @@ def vertical_wind_shear(ua: xr.DataArray, T: xr.DataArray,
     return du_dz
 
 
-def eady_growth_rate(ua: xr.DataArray, T: xr.DataArray,
-                      sigma: xr.DataArray, lat: xr.DataArray,
-                      plev_name: str | None = None) -> xr.DataArray:
+def eady_growth_rate(
+    ua: xr.DataArray,
+    T: xr.DataArray,
+    sigma: xr.DataArray,
+    lat: xr.DataArray,
+    plev_name: str | None = None,
+) -> xr.DataArray:
     """Compute dry Eady growth rate σ_E = 0.31 · f · |∂u/∂z| / N.
 
     Parameters
@@ -177,8 +183,9 @@ def eady_growth_rate(ua: xr.DataArray, T: xr.DataArray,
     return sigma_E
 
 
-def moist_eady_enhancement(T: xr.DataArray, plev_name: str | None = None,
-                            RH: float = 80.0, gamma: float = 0.6) -> xr.DataArray:
+def moist_eady_enhancement(
+    T: xr.DataArray, plev_name: str | None = None, RH: float = 80.0, gamma: float = 0.6
+) -> xr.DataArray:
     """Compute the moist enhancement factor F(RH, T) for Eady growth rate.
 
     F = 1 + (Lv · qs) / (cp · T) · (RH/100)^γ
@@ -227,10 +234,15 @@ def moist_eady_enhancement(T: xr.DataArray, plev_name: str | None = None,
     return F
 
 
-def moist_eady_growth_rate(ua: xr.DataArray, T: xr.DataArray,
-                            sigma: xr.DataArray, lat: xr.DataArray,
-                            plev_name: str | None = None,
-                            RH: float = 80.0, gamma: float = 0.6) -> xr.DataArray:
+def moist_eady_growth_rate(
+    ua: xr.DataArray,
+    T: xr.DataArray,
+    sigma: xr.DataArray,
+    lat: xr.DataArray,
+    plev_name: str | None = None,
+    RH: float = 80.0,
+    gamma: float = 0.6,
+) -> xr.DataArray:
     """Compute moist Eady growth rate: σ_moist = σ_E × F(RH, T).
 
     Parameters
@@ -265,10 +277,16 @@ def moist_eady_growth_rate(ua: xr.DataArray, T: xr.DataArray,
     return sigma_moist
 
 
-def compute_eady_diagnostics(ua: xr.DataArray, T: xr.DataArray,
-                              lat_min: float = 50.0, lat_max: float = 70.0,
-                              p_top: float = 500.0, p_bot: float = 850.0,
-                              RH: float = 80.0, gamma: float = 0.6) -> dict:
+def compute_eady_diagnostics(
+    ua: xr.DataArray,
+    T: xr.DataArray,
+    lat_min: float = 50.0,
+    lat_max: float = 70.0,
+    p_top: float = 500.0,
+    p_bot: float = 850.0,
+    RH: float = 80.0,
+    gamma: float = 0.6,
+) -> dict:
     """Compute domain-mean, layer-averaged Eady growth rate diagnostics.
 
     Parameters
@@ -319,12 +337,10 @@ def compute_eady_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     lat_name_sub = _get_lat_name(ds_dry)
 
     eady_dry_mean = float(
-        (ds_dry["eady_dry"].mean(dim="time") * weights)
-        .sum(dim=lat_name_sub).mean()
+        (ds_dry["eady_dry"].mean(dim="time") * weights).sum(dim=lat_name_sub).mean()
     )
     eady_moist_mean = float(
-        (ds_moist["eady_moist"].mean(dim="time") * weights)
-        .sum(dim=lat_name_sub).mean()
+        (ds_moist["eady_moist"].mean(dim="time") * weights).sum(dim=lat_name_sub).mean()
     )
 
     # Convert from s⁻¹ to day⁻¹
@@ -336,8 +352,9 @@ def compute_eady_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     # This avoids the inconsistency where averaged F ≠ eady_moist/eady_dry
     eady_ratio = eady_moist_day / eady_dry_day if eady_dry_day > 0 else float("nan")
 
-    logger.info("Eady dry=%.3f day⁻¹, moist=%.3f day⁻¹, F=%.3f",
-                eady_dry_day, eady_moist_day, eady_ratio)
+    logger.info(
+        "Eady dry=%.3f day⁻¹, moist=%.3f day⁻¹, F=%.3f", eady_dry_day, eady_moist_day, eady_ratio
+    )
 
     return {
         "eady_dry": eady_dry_day,

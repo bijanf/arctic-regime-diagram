@@ -42,8 +42,7 @@ def _make_isothermal_dataset(T0=250.0, p_levels=None):
     So for an isothermal atmosphere: σ = Rd·T0·κ/p²  (p in Pa).
     """
     if p_levels is None:
-        p_levels = np.array([1000, 925, 850, 700, 600, 500, 400, 300, 200, 100],
-                            dtype=float)
+        p_levels = np.array([1000, 925, 850, 700, 600, 500, 400, 300, 200, 100], dtype=float)
 
     lat = np.array([65.0, 70.0, 75.0, 80.0, 85.0])
     lon = np.array([0.0, 90.0, 180.0, 270.0])
@@ -121,8 +120,7 @@ class TestStaticStability:
             sigma_mean = float(sigma_at_level.mean())
 
             np.testing.assert_allclose(
-                sigma_mean, sigma_analytical, rtol=0.15,
-                err_msg=f"σ mismatch at {plev_hPa} hPa"
+                sigma_mean, sigma_analytical, rtol=0.15, err_msg=f"σ mismatch at {plev_hPa} hPa"
             )
 
     def test_layer_mean_within_range(self):

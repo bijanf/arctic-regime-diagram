@@ -28,9 +28,9 @@ from ..data.preprocess import (
 logger = logging.getLogger(__name__)
 
 # Physical constants (defaults)
-LV = 2.501e6    # J/kg, latent heat of vaporization
-CP = 1004.0     # J/(kg·K)
-F0 = 1.2e-4     # s⁻¹, Coriolis at ~55°N
+LV = 2.501e6  # J/kg, latent heat of vaporization
+CP = 1004.0  # J/(kg·K)
+F0 = 1.2e-4  # s⁻¹, Coriolis at ~55°N
 H_SCALE = 8500.0  # m, scale height
 R_EARTH = 6.371e6  # m, Earth radius
 
@@ -97,14 +97,15 @@ def meridional_T_gradient(
 
     # Mean absolute value
     grad_mag = float(np.abs(dT_dy).mean())
-    logger.info("|∂T/∂y| at %.0f hPa, %.0f-%.0f°N = %.2e K/m",
-                plev_level, lat_min, lat_max, grad_mag)
+    logger.info(
+        "|∂T/∂y| at %.0f hPa, %.0f-%.0f°N = %.2e K/m", plev_level, lat_min, lat_max, grad_mag
+    )
     return grad_mag
 
 
-def rossby_deformation_radius(sigma_bar: float, H: float = H_SCALE,
-                              f0: float = F0,
-                              dp: float = 35000.0) -> float:
+def rossby_deformation_radius(
+    sigma_bar: float, H: float = H_SCALE, f0: float = F0, dp: float = 35000.0
+) -> float:
     """Compute the Rossby deformation radius from QG stretching.
 
     From the QG PV equation, the stretching term f₀²/(σ·Δp²) defines
@@ -220,6 +221,5 @@ def diabatic_number(
         return float("nan")
 
     D = numerator / denominator
-    logger.info("D = %.3f  (numerator=%.2e, denominator=%.2e)",
-                D, numerator, denominator)
+    logger.info("D = %.3f  (numerator=%.2e, denominator=%.2e)", D, numerator, denominator)
     return D

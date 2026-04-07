@@ -26,17 +26,16 @@ from .static_stability import layer_mean_stability, static_stability
 logger = logging.getLogger(__name__)
 
 # Physical constants
-OMEGA = 7.2921e-5    # rad/s, Earth rotation rate
-A_EARTH = 6.371e6    # m, Earth radius
-G = 9.81             # m/s²
-RD = 287.05          # J/(kg·K)
-H_SCALE = 8500.0     # m, scale height
+OMEGA = 7.2921e-5  # rad/s, Earth rotation rate
+A_EARTH = 6.371e6  # m, Earth radius
+G = 9.81  # m/s²
+RD = 287.05  # J/(kg·K)
+H_SCALE = 8500.0  # m, scale height
 
 
-def deformation_radius_map(sigma_field: xr.DataArray,
-                            lat: xr.DataArray,
-                            dp: float = 35000.0,
-                            f0_fixed: float | None = None) -> xr.DataArray:
+def deformation_radius_map(
+    sigma_field: xr.DataArray, lat: xr.DataArray, dp: float = 35000.0, f0_fixed: float | None = None
+) -> xr.DataArray:
     """Compute Rossby deformation radius Ld(lat, lon) from local σ̄.
 
     Ld = √σ̄ · Δp / f(lat)
@@ -74,8 +73,7 @@ def deformation_radius_map(sigma_field: xr.DataArray,
     return Ld
 
 
-def zonal_mean_wind(ua: xr.DataArray,
-                     time_dim: str = "time") -> xr.DataArray:
+def zonal_mean_wind(ua: xr.DataArray, time_dim: str = "time") -> xr.DataArray:
     """Compute zonal-mean, time-mean zonal wind ū(lat, plev).
 
     Parameters
@@ -160,10 +158,13 @@ def beta_star(u_bar: xr.DataArray, lat: xr.DataArray) -> xr.DataArray:
     return beta_s
 
 
-def refractive_index_squared(u_bar: xr.DataArray, lat: xr.DataArray,
-                              plev_name: str | None = None,
-                              N: xr.DataArray | None = None,
-                              k: int | None = None) -> xr.DataArray:
+def refractive_index_squared(
+    u_bar: xr.DataArray,
+    lat: xr.DataArray,
+    plev_name: str | None = None,
+    N: xr.DataArray | None = None,
+    k: int | None = None,
+) -> xr.DataArray:
     """Compute stationary wave refractive index K_s²(lat, plev).
 
     K_s² = β* / ū_M
@@ -202,12 +203,12 @@ def refractive_index_squared(u_bar: xr.DataArray, lat: xr.DataArray,
         cos_phi = np.cos(phi).clip(min=0.01)
         k_angular = k / (A_EARTH * cos_phi)  # rad/m
 
-        Ks2 = Ks2 - k_angular ** 2
+        Ks2 = Ks2 - k_angular**2
 
         if N is not None:
             f0 = 2.0 * OMEGA * np.sin(phi)
             N_safe = N.where(N > 1e-6, 1e-6)
-            vertical_term = f0 ** 2 / (4.0 * N_safe ** 2 * H_SCALE ** 2)
+            vertical_term = f0**2 / (4.0 * N_safe**2 * H_SCALE**2)
             Ks2 = Ks2 - vertical_term
 
     Ks2.name = "Ks2"
@@ -219,15 +220,20 @@ def refractive_index_squared(u_bar: xr.DataArray, lat: xr.DataArray,
     return Ks2
 
 
-def compute_wave_diagnostics(ua: xr.DataArray, T: xr.DataArray,
-                              sigma_bar: float,
-                              lat_min: float = 55.0, lat_max: float = 75.0,
-                              p_top: float = 500.0, p_bot: float = 850.0,
-                              f0: float = 1.2e-4,
-                              dp: float = 35000.0,
-                              Ks_plev: float = 250.0,
-                              Ks_lat_min: float = 50.0,
-                              Ks_lat_max: float = 70.0) -> dict:
+def compute_wave_diagnostics(
+    ua: xr.DataArray,
+    T: xr.DataArray,
+    sigma_bar: float,
+    lat_min: float = 55.0,
+    lat_max: float = 75.0,
+    p_top: float = 500.0,
+    p_bot: float = 850.0,
+    f0: float = 1.2e-4,
+    dp: float = 35000.0,
+    Ks_plev: float = 250.0,
+    Ks_lat_min: float = 50.0,
+    Ks_lat_max: float = 70.0,
+) -> dict:
     """Compute Ld and K_s² diagnostics for a model/period.
 
     Parameters
@@ -274,9 +280,7 @@ def compute_wave_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     ds_Ld_arctic = subset_arctic(ds_Ld, lat_min, lat_max)
     weights = area_weights(ds_Ld_arctic)
     lat_name_sub = _get_lat_name(ds_Ld_arctic)
-    Ld_mean = float(
-        (ds_Ld_arctic["Ld"] * weights).sum(dim=lat_name_sub).mean()
-    )
+    Ld_mean = float((ds_Ld_arctic["Ld"] * weights).sum(dim=lat_name_sub).mean())
     Ld_mean_km = Ld_mean / 1000.0
 
     # ── K_s² from zonal-mean wind ──
@@ -302,8 +306,14 @@ def compute_wave_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     else:
         Ks_250 = float("nan")
 
-    logger.info("Ld_mean=%.0f km, K_s²(%.0f hPa, %.0f-%.0f°N)=%.2e m⁻²",
-                Ld_mean_km, Ks_plev, Ks_lat_min, Ks_lat_max, Ks_250)
+    logger.info(
+        "Ld_mean=%.0f km, K_s²(%.0f hPa, %.0f-%.0f°N)=%.2e m⁻²",
+        Ld_mean_km,
+        Ks_plev,
+        Ks_lat_min,
+        Ks_lat_max,
+        Ks_250,
+    )
 
     return {
         "Ld_mean_km": Ld_mean_km,

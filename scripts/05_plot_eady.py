@@ -28,8 +28,7 @@ from src.plotting.raincloud import (
 )
 from src.plotting.style import SCENARIO_COLORS, apply_style
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 # Quality filters
@@ -39,19 +38,19 @@ R_MAX = 1.5
 # All scenario/period groups for panel (a) — includes historical
 ALL_GROUPS = [
     ("historical", "historical", "Hist."),
-    ("ssp245", "mid_century",   "SSP2-4.5\nMid"),
-    ("ssp245", "end_century",   "SSP2-4.5\nEnd"),
-    ("ssp585", "mid_century",   "SSP5-8.5\nMid"),
-    ("ssp585", "end_century",   "SSP5-8.5\nEnd"),
+    ("ssp245", "mid_century", "SSP2-4.5\nMid"),
+    ("ssp245", "end_century", "SSP2-4.5\nEnd"),
+    ("ssp585", "mid_century", "SSP5-8.5\nMid"),
+    ("ssp585", "end_century", "SSP5-8.5\nEnd"),
 ]
 
 # Groups for panel (b) F strip (includes historical)
 F_GROUPS = [
     ("historical", "historical", "Historical"),
-    ("ssp245", "mid_century",   "SSP2-4.5 Mid"),
-    ("ssp245", "end_century",   "SSP2-4.5 End"),
-    ("ssp585", "mid_century",   "SSP5-8.5 Mid"),
-    ("ssp585", "end_century",   "SSP5-8.5 End"),
+    ("ssp245", "mid_century", "SSP2-4.5 Mid"),
+    ("ssp245", "end_century", "SSP2-4.5 End"),
+    ("ssp585", "mid_century", "SSP5-8.5 Mid"),
+    ("ssp585", "end_century", "SSP5-8.5 End"),
 ]
 
 # X-positions: Historical alone, then SSP groups with gap between scenarios
@@ -84,8 +83,7 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
     # Collect absolute Eady growth rate values for each group
     labels, data_dry, data_moist, colors, counts = [], [], [], [], []
     for scenario, period, label in ALL_GROUPS:
-        sub = df_eady[(df_eady["scenario"] == scenario) &
-                      (df_eady["period"] == period)]
+        sub = df_eady[(df_eady["scenario"] == scenario) & (df_eady["period"] == period)]
         if len(sub) == 0:
             continue
         labels.append(label)
@@ -95,7 +93,7 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
         counts.append(len(sub))
 
     if len(data_dry) > 0:
-        positions = XPOS_ALL[:len(labels)]
+        positions = XPOS_ALL[: len(labels)]
 
         for i in range(len(data_dry)):
             pos = positions[i]
@@ -104,20 +102,38 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
             d_moist = data_moist[i]
 
             # Dry: half-violin LEFT, strip LEFT, box slightly left
-            _half_violin(ax, d_dry, pos - 0.05, col, side="left",
-                         width=0.35, alpha=0.2, kde_bw="scott")
-            _box(ax, d_dry, pos - 0.12, col, width=0.1, alpha=0.45,
-                 whis=(5, 95))
-            _strip(ax, d_dry, pos - 0.12, col, offset=-0.12,
-                   size=10, alpha=0.4, seed=42, jitter_width=0.04)
+            _half_violin(
+                ax, d_dry, pos - 0.05, col, side="left", width=0.35, alpha=0.2, kde_bw="scott"
+            )
+            _box(ax, d_dry, pos - 0.12, col, width=0.1, alpha=0.45, whis=(5, 95))
+            _strip(
+                ax,
+                d_dry,
+                pos - 0.12,
+                col,
+                offset=-0.12,
+                size=10,
+                alpha=0.4,
+                seed=42,
+                jitter_width=0.04,
+            )
 
             # Moist: half-violin RIGHT, strip RIGHT, box slightly right
-            _half_violin(ax, d_moist, pos + 0.05, col, side="right",
-                         width=0.35, alpha=0.35, kde_bw="scott")
-            _box(ax, d_moist, pos + 0.12, col, width=0.1, alpha=0.7,
-                 whis=(5, 95))
-            _strip(ax, d_moist, pos + 0.12, col, offset=0.12,
-                   size=10, alpha=0.55, seed=43, jitter_width=0.04)
+            _half_violin(
+                ax, d_moist, pos + 0.05, col, side="right", width=0.35, alpha=0.35, kde_bw="scott"
+            )
+            _box(ax, d_moist, pos + 0.12, col, width=0.1, alpha=0.7, whis=(5, 95))
+            _strip(
+                ax,
+                d_moist,
+                pos + 0.12,
+                col,
+                offset=0.12,
+                size=10,
+                alpha=0.55,
+                seed=43,
+                jitter_width=0.04,
+            )
 
         # Axis setup
         ax.set_xticks(positions)
@@ -126,31 +142,48 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
         # Model counts (inside panel, near bottom)
         ylim = ax.get_ylim()
         for i, n in enumerate(counts):
-            ax.text(positions[i], ylim[0] + (ylim[1] - ylim[0]) * 0.01,
-                    f"n={n}", ha="center", va="bottom",
-                    fontsize=5, color="grey")
+            ax.text(
+                positions[i],
+                ylim[0] + (ylim[1] - ylim[0]) * 0.01,
+                f"n={n}",
+                ha="center",
+                va="bottom",
+                fontsize=5,
+                color="grey",
+            )
 
         # Legend for dry/moist distinction
         from matplotlib.patches import Patch
+
         legend_dry = Patch(facecolor="#999999", alpha=0.35, label="Dry")
         legend_moist = Patch(facecolor="#999999", alpha=0.7, label="Moist")
-        ax.legend(handles=[legend_dry, legend_moist], fontsize=6,
-                  loc="upper right", handlelength=1.2, handleheight=0.8)
+        ax.legend(
+            handles=[legend_dry, legend_moist],
+            fontsize=6,
+            loc="upper right",
+            handlelength=1.2,
+            handleheight=0.8,
+        )
     else:
-        ax.text(0.5, 0.5, "No data available",
-                ha="center", va="center", transform=ax.transAxes, fontsize=8)
+        ax.text(
+            0.5,
+            0.5,
+            "No data available",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=8,
+        )
 
     ax.set_ylabel("Eady growth rate (day$^{-1}$)", fontsize=7.5)
-    ax.set_title("(a) Baroclinic instability", fontsize=9,
-                 loc="left", fontweight="bold")
+    ax.set_title("(a) Baroclinic instability", fontsize=9, loc="left", fontweight="bold")
 
     # ── Panel (b): Horizontal strip chart of F by scenario/period ──
     ax = axes[1]
 
     f_data, f_positions, f_colors, f_labels = [], [], [], []
     for idx, (scenario, period, label) in enumerate(F_GROUPS):
-        sub = df_eady[(df_eady["scenario"] == scenario) &
-                      (df_eady["period"] == period)]
+        sub = df_eady[(df_eady["scenario"] == scenario) & (df_eady["period"] == period)]
         if len(sub) == 0:
             continue
         f_data.append(sub["eady_ratio"].values)
@@ -159,9 +192,18 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
         f_labels.append(label)
 
     if len(f_data) > 0:
-        horizontal_strip(ax, f_data, f_positions, f_colors, f_labels,
-                         box_height=0.3, dot_size=14, dot_alpha=0.45,
-                         mean_size=45, seed=42)
+        horizontal_strip(
+            ax,
+            f_data,
+            f_positions,
+            f_colors,
+            f_labels,
+            box_height=0.3,
+            dot_size=14,
+            dot_alpha=0.45,
+            mean_size=45,
+            seed=42,
+        )
 
         # Reference line at F=1 (no enhancement)
         ax.axvline(1.0, color="#aaaaaa", ls=":", lw=0.5, zorder=0)
@@ -178,12 +220,18 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
         # Add n= counts on the right
         for data, pos in zip(f_data, f_positions, strict=False):
             n = np.sum(np.isfinite(data))
-            ax.text(ax.get_xlim()[1], pos, f" n={n}",
-                    ha="left", va="center", fontsize=5, color="grey",
-                    clip_on=False)
+            ax.text(
+                ax.get_xlim()[1],
+                pos,
+                f" n={n}",
+                ha="left",
+                va="center",
+                fontsize=5,
+                color="grey",
+                clip_on=False,
+            )
 
-    ax.set_title("(b) Moist enhancement by scenario", fontsize=9,
-                 loc="left", fontweight="bold")
+    ax.set_title("(b) Moist enhancement by scenario", fontsize=9, loc="left", fontweight="bold")
 
     fig.tight_layout(w_pad=3.0)
 

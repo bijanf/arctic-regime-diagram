@@ -57,9 +57,14 @@ def load_dataset(
         for alt_grid in ["gr", "gr1", "gn"]:
             if alt_grid == grid_label:
                 continue
-            logger.info("No '%s' grid for %s/%s/%s, trying '%s'",
-                         grid_label, source_id, experiment_id, variable_id,
-                         alt_grid)
+            logger.info(
+                "No '%s' grid for %s/%s/%s, trying '%s'",
+                grid_label,
+                source_id,
+                experiment_id,
+                variable_id,
+                alt_grid,
+            )
             sub = search_catalog(
                 catalog,
                 variable_id=variable_id,
@@ -85,8 +90,9 @@ def load_dataset(
     # to_dataset_dict returns a dict with keys; take the first one
     key = list(dsets.keys())[0]
     ds = dsets[key]
-    logger.info("Loaded %s (%s, %s, %s): %s", key, source_id, experiment_id,
-                variable_id, list(ds.dims))
+    logger.info(
+        "Loaded %s (%s, %s, %s): %s", key, source_id, experiment_id, variable_id, list(ds.dims)
+    )
     return ds
 
 
@@ -112,5 +118,4 @@ def load_variable(
     """
     if catalog is None:
         catalog = open_catalog()
-    return load_dataset(catalog, variable_id, experiment_id, source_id,
-                        member_id=member_id)
+    return load_dataset(catalog, variable_id, experiment_id, source_id, member_id=member_id)
