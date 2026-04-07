@@ -1,5 +1,10 @@
 # CMIP6 Arctic Regime Diagram
 
+[![CI](https://github.com/bijanf/arctic-regime-diagram/actions/workflows/ci.yml/badge.svg)](https://github.com/bijanf/arctic-regime-diagram/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+
 Multi-model CMIP6 evidence for the Arctic atmosphere's transition from a **dry-linear** to a **moist-nonlinear** dynamical regime under climate change.
 
 Accompanies the manuscript: *"Towards a theoretical understanding of Arctic amplification dynamics"* (Fallah et al., npj Climate and Atmospheric Science, 2026).

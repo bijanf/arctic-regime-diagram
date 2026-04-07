@@ -6,14 +6,12 @@ import signal
 import sys
 from pathlib import Path
 
-import xarray as xr
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
 from src.data.catalog import open_catalog, search_catalog
-from src.data.preprocess import subset_arctic, select_period, select_pressure_layer
+from src.data.preprocess import select_period, select_pressure_layer, subset_arctic
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
@@ -58,7 +56,7 @@ def try_load_dataset(catalog, var, exp, model):
                                model, exp, var, member, grid)
                 signal.alarm(0)
                 continue
-            except Exception as e:
+            except Exception:
                 signal.alarm(0)
                 continue
     return None

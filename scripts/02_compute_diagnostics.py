@@ -20,14 +20,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.physics.static_stability import static_stability, layer_mean_stability
-from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seasonal
-from src.physics.diabatic import (
-    meridional_T_gradient, arctic_mean_precipitation, diabatic_number,
-)
 from src.physics.baroclinic import compute_eady_diagnostics
+from src.physics.diabatic import (
+    arctic_mean_precipitation,
+    diabatic_number,
+    meridional_T_gradient,
+)
+from src.physics.nonlinearity import nonlinearity_ratio, nonlinearity_ratio_seasonal
+from src.physics.static_stability import layer_mean_stability, static_stability
 from src.physics.wave_diagnostics import compute_wave_diagnostics
-from src.data.preprocess import subset_arctic, _get_plev_name
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -65,8 +66,7 @@ def load_processed(model: str, exp: str, var: str,
 
     # Squeeze singleton dimensions from Pangeo (member_id, dcpp_init_year)
     for dim in list(ds.dims):
-        if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude"):
-            if ds.sizes[dim] == 1:
+        if dim not in ("time", "plev", "lev", "lat", "lon", "latitude", "longitude") and ds.sizes[dim] == 1:
                 ds = ds.squeeze(dim, drop=True)
 
     # Reject files with zero time steps

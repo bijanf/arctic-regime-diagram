@@ -1,15 +1,17 @@
 """Tests for the nonlinearity ratio computation."""
 
-import numpy as np
-import pytest
-import xarray as xr
-
 import sys
 from pathlib import Path
+
+import numpy as np
+import xarray as xr
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.physics.nonlinearity import (
-    climatological_mean, monthly_anomalies, nonlinearity_ratio,
+    climatological_mean,
+    monthly_anomalies,
+    nonlinearity_ratio,
 )
 
 

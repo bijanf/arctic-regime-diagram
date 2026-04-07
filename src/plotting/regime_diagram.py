@@ -8,14 +8,17 @@ import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 
 from .style import (
-    apply_style, SCENARIO_COLORS, PERIOD_MARKERS, PERIOD_LABELS,
-    REANALYSIS_STYLES, WINDOW_MARKERS,
+    PERIOD_LABELS,
+    PERIOD_MARKERS,
+    REANALYSIS_STYLES,
+    SCENARIO_COLORS,
+    WINDOW_MARKERS,
+    apply_style,
 )
 
 logger = logging.getLogger(__name__)
@@ -118,9 +121,8 @@ def plot_regime_diagram(
     # --- Scatter individual models ---
     _plot_group(ax, df, "historical", "historical", alpha=0.25, size=20)
     for scenario in ["ssp245", "ssp585"]:
-        for period_key, period_name in [("mid_century", "mid"),
+        for period_key, _period_name in [("mid_century", "mid"),
                                          ("end_century", "end")]:
-            label_key = f"{scenario}_{period_name}"
             sub = df[(df["scenario"] == scenario) & (df["period"] == period_key)]
             if len(sub) == 0:
                 continue
@@ -272,7 +274,7 @@ def _plot_reanalysis(ax, df_rean, zorder=6):
                 zorder=zorder)
 
         # Draw a distinct marker at each window
-        for i, (r, d) in enumerate(zip(R_vals, D_vals)):
+        for i, (r, d) in enumerate(zip(R_vals, D_vals, strict=False)):
             win = windows[i] if windows is not None else None
             marker = WINDOW_MARKERS.get(win, "o")
             ax.scatter(r, d, c=style["color"], marker=marker,

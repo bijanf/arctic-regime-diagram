@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import intake
 
@@ -30,9 +29,9 @@ def search_catalog(
     catalog,
     variable_id: str,
     experiment_id: str | list[str],
-    source_id: Optional[str | list[str]] = None,
+    source_id: str | list[str] | None = None,
     table_id: str = "Amon",
-    member_id: Optional[str | list[str]] = None,
+    member_id: str | list[str] | None = None,
     grid_label: str = "gn",
 ) -> intake.open_esm_datastore:
     """Search the catalog for matching datasets.

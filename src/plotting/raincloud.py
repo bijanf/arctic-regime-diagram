@@ -9,9 +9,8 @@ Reference: Allen et al. (2019), Wellcome Open Research.
 """
 
 import numpy as np
-from scipy import stats
-import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
+from scipy import stats
 
 
 def _half_violin(ax, data, pos, color, side="right", width=0.3,
@@ -251,7 +250,7 @@ def raincloud(ax, data_list, positions, colors, labels,
             kw.update(refline_kw)
         ax.axhline(refline, **kw)
 
-    for i, (data, pos, color) in enumerate(zip(data_list, positions, colors)):
+    for i, (data, pos, color) in enumerate(zip(data_list, positions, colors, strict=False)):
         d = np.asarray(data, dtype=float)
 
         # KDE exclusions
@@ -276,7 +275,7 @@ def raincloud(ax, data_list, positions, colors, labels,
     if show_counts:
         if count_y is None:
             count_y = ax.get_ylim()[0]
-        for i, (data, pos) in enumerate(zip(data_list, positions)):
+        for data, pos in zip(data_list, positions, strict=False):
             n = np.sum(np.isfinite(data))
             ax.text(pos, count_y, f"n={n}", ha="center", va="top",
                     fontsize=count_fontsize, color=count_color)
@@ -308,7 +307,7 @@ def horizontal_strip(ax, data_list, positions, colors, labels,
     """
     rng = np.random.default_rng(seed)
 
-    for data, pos, color in zip(data_list, positions, colors):
+    for data, pos, color in zip(data_list, positions, colors, strict=False):
         d = np.asarray(data, dtype=float)
         d = d[np.isfinite(d)]
         if len(d) == 0:

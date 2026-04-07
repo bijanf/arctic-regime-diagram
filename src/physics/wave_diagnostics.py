@@ -15,10 +15,13 @@ import numpy as np
 import xarray as xr
 
 from ..data.preprocess import (
-    _get_plev_name, _get_lat_name, _get_lon_name,
-    area_weights, subset_arctic,
+    _get_lat_name,
+    _get_lon_name,
+    _get_plev_name,
+    area_weights,
+    subset_arctic,
 )
-from .static_stability import static_stability, layer_mean_stability
+from .static_stability import layer_mean_stability, static_stability
 
 logger = logging.getLogger(__name__)
 
@@ -262,10 +265,7 @@ def compute_wave_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     sigma = static_stability(T, plev_name=plev_name)
     sigma_layer = layer_mean_stability(sigma, p_top=p_top, p_bot=p_bot)
     # Time-mean
-    if "time" in sigma_layer.dims:
-        sigma_clim = sigma_layer.mean(dim="time")
-    else:
-        sigma_clim = sigma_layer
+    sigma_clim = sigma_layer.mean(dim="time") if "time" in sigma_layer.dims else sigma_layer
 
     Ld = deformation_radius_map(sigma_clim, lat, dp=dp)
 
@@ -286,10 +286,7 @@ def compute_wave_diagnostics(ua: xr.DataArray, T: xr.DataArray,
     # K_s² at specified pressure level
     plev_vals = u_bar[plev_name].values if plev_name in u_bar.dims else None
     if plev_vals is not None:
-        if float(np.nanmax(plev_vals)) > 10000:
-            Ks_plev_u = Ks_plev * 100.0
-        else:
-            Ks_plev_u = Ks_plev
+        Ks_plev_u = Ks_plev * 100.0 if float(np.nanmax(plev_vals)) > 10000 else Ks_plev
 
         u_bar_level = u_bar.sel({plev_name: Ks_plev_u}, method="nearest")
         beta_s_level = beta_s.sel({plev_name: Ks_plev_u}, method="nearest")

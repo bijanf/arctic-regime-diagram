@@ -18,8 +18,8 @@ import logging
 import numpy as np
 import xarray as xr
 
-from ..data.preprocess import _get_plev_name, _get_lat_name, area_weights, subset_arctic
-from .static_stability import static_stability, layer_mean_stability
+from ..data.preprocess import _get_lat_name, _get_plev_name, area_weights, subset_arctic
+from .static_stability import layer_mean_stability, static_stability
 
 logger = logging.getLogger(__name__)
 

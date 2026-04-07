@@ -12,7 +12,7 @@ Key thresholds from the paper:
 import numpy as np
 import xarray as xr
 
-from ..data.preprocess import area_weights, _get_lat_name
+from ..data.preprocess import _get_lat_name, area_weights
 
 
 def climatological_mean(sigma: xr.DataArray,

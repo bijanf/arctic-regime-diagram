@@ -4,17 +4,21 @@ Includes analytical validation against an isothermal atmosphere where
 σ has a known closed-form solution.
 """
 
-import numpy as np
-import pytest
-import xarray as xr
-
 import sys
 from pathlib import Path
+
+import numpy as np
+import xarray as xr
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.physics.static_stability import (
-    potential_temperature, static_stability, layer_mean_stability,
-    RD, CP, KAPPA, P0,
+    KAPPA,
+    P0,
+    RD,
+    layer_mean_stability,
+    potential_temperature,
+    static_stability,
 )
 
 

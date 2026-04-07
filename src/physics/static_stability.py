@@ -12,7 +12,6 @@ import xarray as xr
 
 from ..data.preprocess import _get_plev_name
 
-
 # Default physical constants
 RD = 287.05      # J/(kg·K)
 CP = 1004.0      # J/(kg·K)

@@ -11,20 +11,21 @@ import logging
 import sys
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.patches import FancyBboxPatch, ConnectionPatch
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import stats as sp_stats
+from matplotlib.patches import ConnectionPatch, FancyBboxPatch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.plotting.style import (
-    apply_style, SCENARIO_COLORS, REANALYSIS_STYLES, WINDOW_MARKERS,
-)
 from src.plotting.raincloud import raincloud
+from src.plotting.style import (
+    REANALYSIS_STYLES,
+    WINDOW_MARKERS,
+    apply_style,
+)
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -138,12 +139,12 @@ def _plot_panel_a(ax, df, df_reanalysis):
     if df_reanalysis is not None:
         era5 = df_reanalysis[df_reanalysis["dataset"] == "ERA5"].sort_values("center_year")
         if len(era5) > 0:
-            style = REANALYSIS_STYLES["ERA5"]
+            REANALYSIS_STYLES["ERA5"]
             R_vals = era5["R"].values
             D_vals = era5["D"].values
             windows = era5["window"].values if "window" in era5.columns else None
             ax.plot(R_vals, D_vals, color="black", ls="-", lw=1.8, zorder=7)
-            for i, (r, d) in enumerate(zip(R_vals, D_vals)):
+            for i, (r, d) in enumerate(zip(R_vals, D_vals, strict=False)):
                 win = windows[i] if windows is not None else None
                 marker_w = WINDOW_MARKERS.get(win, "o")
                 ax.scatter(r, d, c="black", marker=marker_w,
@@ -248,7 +249,7 @@ def _plot_panel_b(ax, df):
     )
 
     # Annotate % below zero for each group
-    for i, (label, data) in enumerate(zip(labels, data_list)):
+    for _i, (label, data) in enumerate(zip(labels, data_list, strict=False)):
         n = len(data)
         n_below = (data < 0).sum()
         pct = n_below / n * 100 if n > 0 else 0
@@ -279,13 +280,18 @@ def _plot_panel_b(ax, df):
 # Panel (c): Causal Chain Schematic
 # ═══════════════════════════════════════════════════════════════════
 
-def _plot_panel_c(ax):
+def _plot_panel_c(ax, pct_ks_decline=None):
     """Causal chain: 4 nodes connected by arrows + feedback loop."""
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
 
-    # Node definitions: (x_center, title, subtitle, facecolor, edgecolor)
+    # Format Ks² decline percentage from data (fallback to "most" if unavailable)
+    ks_label = (f"{pct_ks_decline:.0f}% of models\n(panel b)"
+                if pct_ks_decline is not None
+                else "most models\n(panel b)")
+
+    # "4× global" Arctic warming: Rantanen et al. (2022), Nat. Commun. 13, 708
     nodes = [
         (0.095, "Arctic\nwarming",
          r"$\Delta T_s$: 4$\times$ global", "#e0e0e0", "#999999"),
@@ -293,7 +299,7 @@ def _plot_panel_c(ax):
          r"$\bar{\sigma}\downarrow$, moisture$\uparrow$"
          "\n(panel a)", "#c6dbef", "#6baed6"),
         (0.575, "$K_s^2$ decreases",
-         "87% of models\n(panel b)", "#fdd0a2", "#e6550d"),
+         ks_label, "#fdd0a2", "#e6550d"),
         (0.835, "Wave trapping\n& amplification",
          "SSW, blocking,\njet shifts", "#fcbba1", "#cb181d"),
     ]
@@ -396,7 +402,15 @@ def plot_hero_figure(df, df_reanalysis, output_path):
 
     _plot_panel_a(ax_a, df, df_reanalysis)
     _plot_panel_b(ax_b, df)
-    _plot_panel_c(ax_c)
+
+    # Compute Ks² decline percentage from data for panel (c) schematic
+    dks_groups = _compute_dks_per_group(df)
+    ssp585_end_dks = dks_groups.get("SSP5-8.5\nEnd", np.array([]))
+    pct_ks_decline = None
+    if len(ssp585_end_dks) > 0:
+        pct_ks_decline = (ssp585_end_dks < 0).sum() / len(ssp585_end_dks) * 100
+
+    _plot_panel_c(ax_c, pct_ks_decline=pct_ks_decline)
     _add_panel_connectors(fig, ax_a, ax_b, ax_c)
 
     # Save

@@ -17,17 +17,17 @@ import logging
 import sys
 from pathlib import Path
 
-import xarray as xr
-
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.data.catalog import open_catalog, find_common_models, search_catalog
+from src.data.catalog import find_common_models, open_catalog
 from src.data.download import load_dataset
 from src.data.preprocess import (
-    subset_arctic, select_period, select_pressure_layer,
+    select_period,
+    select_pressure_layer,
+    subset_arctic,
 )
 
 logging.basicConfig(level=logging.INFO,

@@ -21,8 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.plotting.style import apply_style, SCENARIO_COLORS, PERIOD_MARKERS
 from src.plotting.raincloud import raincloud
+from src.plotting.style import SCENARIO_COLORS, apply_style
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -230,7 +230,7 @@ def plot_within_model_figure(df: pd.DataFrame, output_path: Path):
 
 
 def main():
-    cfg = load_config()
+    load_config()
 
     csv_path = PROJECT_ROOT / "data" / "diagnostics" / "regime_diagnostics.csv"
     if not csv_path.exists():

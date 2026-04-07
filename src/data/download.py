@@ -1,7 +1,6 @@
 """Lazy-load CMIP6 datasets from Google Cloud Zarr stores."""
 
 import logging
-from typing import Optional
 
 import xarray as xr
 

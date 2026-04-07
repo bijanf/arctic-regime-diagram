@@ -1,0 +1,31 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "N806",   # variable in function should be lowercase (physics notation)
+    "N803",   # argument name should be lowercase (physics notation)
+    "N802",   # function name should be lowercase
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N"]
+"scripts/*" = ["E402"]  # sys.path.insert before local imports is standard
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

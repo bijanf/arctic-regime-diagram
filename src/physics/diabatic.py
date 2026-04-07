@@ -18,8 +18,11 @@ import numpy as np
 import xarray as xr
 
 from ..data.preprocess import (
-    area_weights, subset_arctic, subset_edge,
-    _get_lat_name, _get_plev_name,
+    _get_lat_name,
+    _get_plev_name,
+    area_weights,
+    subset_arctic,
+    subset_edge,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,10 +69,7 @@ def meridional_T_gradient(
 
     # Select pressure level
     plev_vals = T[plev_name].values
-    if np.nanmax(plev_vals) > 10000:
-        plev_level_u = plev_level * 100.0
-    else:
-        plev_level_u = plev_level
+    plev_level_u = plev_level * 100.0 if np.nanmax(plev_vals) > 10000 else plev_level
     T_level = T.sel({plev_name: plev_level_u}, method="nearest")
 
     # Subset to edge latitudes

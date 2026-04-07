@@ -21,8 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.plotting.style import apply_style, SCENARIO_COLORS
 from src.plotting.raincloud import raincloud
+from src.plotting.style import SCENARIO_COLORS, apply_style
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -91,7 +91,7 @@ def plot_wave_figure(df: pd.DataFrame, output_path: Path):
     if len(data_ks) > 0:
         positions_ks = XPOS[:len(labels_ks)]
 
-        medians = raincloud(
+        raincloud(
             ax, data_ks, positions_ks, colors_ks, labels_ks,
             violin_width=0.35, violin_alpha=0.25,
             box_width=0.18, box_alpha=0.55,
@@ -224,7 +224,7 @@ def plot_wave_figure(df: pd.DataFrame, output_path: Path):
 
 
 def main():
-    cfg = load_config()
+    load_config()
 
     csv_path = PROJECT_ROOT / "data" / "diagnostics" / "regime_diagnostics.csv"
     if not csv_path.exists():

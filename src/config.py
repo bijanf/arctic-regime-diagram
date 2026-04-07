@@ -1,15 +1,15 @@
 """Load and validate YAML configuration files."""
 
 from pathlib import Path
-import yaml
 
+import yaml
 
 _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
 
 def load_yaml(path: Path) -> dict:
     """Read a YAML file and return its contents as a dict."""
-    with open(path, "r") as f:
+    with open(path) as f:
         return yaml.safe_load(f)
 
 

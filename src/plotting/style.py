@@ -3,7 +3,6 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-
 # Nature Comms: single column = 88 mm ≈ 3.46 in; double = 180 mm ≈ 7.09 in
 # We use a slightly larger single-column figure for the regime diagram.
 NATURE_COMMS_RCPARAMS = {

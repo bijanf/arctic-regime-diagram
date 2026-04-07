@@ -15,16 +15,18 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import stats as sp_stats
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import load_config
-from src.plotting.style import apply_style, SCENARIO_COLORS
 from src.plotting.raincloud import (
-    _half_violin, _box, _strip, horizontal_strip,
+    _box,
+    _half_violin,
+    _strip,
+    horizontal_strip,
 )
+from src.plotting.style import SCENARIO_COLORS, apply_style
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -174,7 +176,7 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
         ax.set_xlabel("Moist enhancement factor $F$", fontsize=7.5)
 
         # Add n= counts on the right
-        for data, pos in zip(f_data, f_positions):
+        for data, pos in zip(f_data, f_positions, strict=False):
             n = np.sum(np.isfinite(data))
             ax.text(ax.get_xlim()[1], pos, f" n={n}",
                     ha="left", va="center", fontsize=5, color="grey",
@@ -194,7 +196,7 @@ def plot_eady_figure(df: pd.DataFrame, output_path: Path):
 
 
 def main():
-    cfg = load_config()
+    load_config()
 
     csv_path = PROJECT_ROOT / "data" / "diagnostics" / "regime_diagnostics.csv"
     if not csv_path.exists():

@@ -63,9 +63,8 @@ def regrid_file(src_path: Path, dst_path: Path) -> bool:
     # Squeeze singleton dimensions
     for dim in list(ds.dims):
         if dim not in ("time", "plev", "lev", "lat", "lon",
-                        "latitude", "longitude"):
-            if ds.sizes[dim] == 1:
-                ds = ds.squeeze(dim, drop=True)
+                        "latitude", "longitude") and ds.sizes[dim] == 1:
+            ds = ds.squeeze(dim, drop=True)
 
     # Validate
     if ds.sizes.get("time", 0) == 0:
@@ -89,17 +88,16 @@ def regrid_file(src_path: Path, dst_path: Path) -> bool:
         return False
 
     src_lat = ds[lat_name].values
-    src_lon = ds[lon_name].values
 
     # Only include target lats within the source data range (with 1° margin)
     lat_min_src = src_lat.min()
     lat_max_src = src_lat.max()
-    target_lat = TARGET_LAT[(TARGET_LAT >= lat_min_src + 1.0) &
-                             (TARGET_LAT <= lat_max_src - 1.0)]
+    target_lat = TARGET_LAT[(lat_min_src + 1.0 <= TARGET_LAT) &
+                             (lat_max_src - 1.0 >= TARGET_LAT)]
     if len(target_lat) == 0:
         # Fall back: use all target points within source range
-        target_lat = TARGET_LAT[(TARGET_LAT >= lat_min_src) &
-                                 (TARGET_LAT <= lat_max_src)]
+        target_lat = TARGET_LAT[(lat_min_src <= TARGET_LAT) &
+                                 (lat_max_src >= TARGET_LAT)]
 
     if len(target_lat) == 0:
         logger.warning("No target lat points within source range [%.1f, %.1f]: %s",
@@ -137,7 +135,7 @@ def regrid_file(src_path: Path, dst_path: Path) -> bool:
 
 
 def main():
-    cfg = load_config()
+    load_config()
     src_dir = PROJECT_ROOT / "data" / "processed"
     dst_dir = PROJECT_ROOT / "data" / "processed_regridded"
     dst_dir.mkdir(parents=True, exist_ok=True)
