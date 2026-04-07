@@ -76,10 +76,9 @@ class TestNonlinearityRatio:
         sigma = _make_sigma_dataset(n_time=5000, anomaly_frac=target_R)
         R = nonlinearity_ratio(sigma)
 
-        # For Gaussian anomalies, <|σ'|> ≈ √(2/π) · std(σ')
-        # So R ≈ √(2/π) · anomaly_frac ≈ 0.798 · anomaly_frac
-        expected_R = np.sqrt(2 / np.pi) * target_R
-        np.testing.assert_allclose(R, expected_R, rtol=0.1)
+        # R uses RMS(σ') / σ̄. For Gaussian anomalies with std = frac * σ̄,
+        # RMS ≈ std, so R ≈ anomaly_frac.
+        np.testing.assert_allclose(R, target_R, rtol=0.1)
 
     def test_zero_anomalies(self):
         """Constant σ should give R = 0."""
