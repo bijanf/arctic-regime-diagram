@@ -33,6 +33,16 @@ from src.data.preprocess import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+
+def _clean_encoding(ds):
+    """Remove conflicting _FillValue/missing_value from variable encodings."""
+    for var in ds.variables:
+        enc = ds[var].encoding
+        if "missing_value" in enc and "_FillValue" in enc:
+            del enc["missing_value"]
+    return ds
+
+
 # Members to try in order for each model
 MEMBER_ATTEMPTS = ["r1i1p1f1", "r1i1p1f2", "r1i1p1f3", "r2i1p1f1"]
 
@@ -130,7 +140,7 @@ def main():
                                 lat_max_download,
                             )
 
-                        # Save directly (skip regridding to avoid esmpy dependency)
+                        _clean_encoding(ds_sub)
                         ds_sub.to_netcdf(out_path)
                         logger.info("  Saved: %s", out_path)
 
@@ -196,6 +206,7 @@ def main():
                         cfg["pressure"]["full_range_top"],
                         cfg["pressure"]["full_range_bot"],
                     )
+                    _clean_encoding(ds_sub)
                     ds_sub.to_netcdf(out_path)
                     logger.info("  Saved: %s", out_path)
 

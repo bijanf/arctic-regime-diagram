@@ -59,6 +59,10 @@ def select_period(ds: xr.Dataset, start: str, end: str) -> xr.Dataset:
     xr.Dataset
     """
     time_name = _get_time_name(ds)
+    # Truncate end date to YYYY-MM to avoid 360-day calendar issues
+    parts = end.split("-")
+    if len(parts) == 3:
+        end = f"{parts[0]}-{parts[1]}"
     return ds.sel({time_name: slice(start, end)})
 
 

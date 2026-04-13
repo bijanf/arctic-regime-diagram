@@ -5,6 +5,7 @@ Supports ERA5 (via CDS API) and NCEP/NCAR Reanalysis 1 (via NOAA PSL OPeNDAP).
 Outputs reanalysis_diagnostics.csv for overlay on the CMIP6 regime diagram.
 """
 
+import gc
 import logging
 import sys
 from pathlib import Path
@@ -107,6 +108,7 @@ def download_ncep_r1(data_dir):
         ds_ta["ta"] = ds_ta["ta"] + 273.15
         logger.info("  Converted NCEP R1 ta from °C to K")
     ds_ta = ds_ta.sortby("lat").sortby("plev").load()
+    ds_ta["ta"].encoding.clear()
     logger.info(
         "  NCEP R1 ta: %s, T=[%.1f, %.1f] K, plev=%s",
         dict(ds_ta.sizes),
@@ -123,6 +125,8 @@ def download_ncep_r1(data_dir):
         ds_pr = ds_pr.sel(lat=slice(50, 90))  # ascending
     ds_pr = ds_pr.rename({"prate": "pr"})
     ds_pr = ds_pr.sortby("lat").load()  # force into memory
+    # Clear inherited encoding that corrupts data on save (least_significant_digit=0)
+    ds_pr["pr"].encoding.clear()
     logger.info(
         "  NCEP R1 pr: %s, pr=[%.2e, %.2e] kg/m²/s",
         dict(ds_pr.sizes),
@@ -165,6 +169,7 @@ def download_ncep_r1_ua(data_dir):
     ds_ua = ds_ua.sel(lat=slice(90, 50), level=slice(1000, 200))
     ds_ua = ds_ua.rename({"uwnd": "ua", "level": "plev"})
     ds_ua = ds_ua.sortby("lat").sortby("plev").load()
+    ds_ua["ua"].encoding.clear()
     logger.info(
         "  NCEP R1 ua: %s, u=[%.1f, %.1f] m/s",
         dict(ds_ua.sizes),
@@ -523,6 +528,11 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name, ds_ua=None, 
                 "Ks_250": np.nan,
             }
 
+            # Use climatological (time-mean) fields for Eady/Wave to limit memory
+            ta_clim = ta_window.mean(dim="time")
+            del sigma, ta_window, pr_window
+            gc.collect()
+
             # Compute Eady and wave diagnostics if ua is available
             if ds_ua is not None:
                 try:
@@ -538,10 +548,13 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name, ds_ua=None, 
                     )
 
                 if len(ua_window.time) >= 12:
+                    ua_clim = ua_window.mean(dim="time")
+                    del ua_window
+
                     try:
                         eady = compute_eady_diagnostics(
-                            ua_window,
-                            ta_window,
+                            ua_clim,
+                            ta_clim,
                             lat_min=cfg["domain"]["arctic_lat_min"],
                             lat_max=cfg["domain"]["arctic_lat_max"],
                             p_top=cfg["pressure"]["layer_top"],
@@ -555,8 +568,8 @@ def compute_reanalysis_diagnostics(ds_ta, ds_pr, cfg, dataset_name, ds_ua=None, 
 
                     try:
                         waves = compute_wave_diagnostics(
-                            ua_window,
-                            ta_window,
+                            ua_clim,
+                            ta_clim,
                             sigma_bar,
                             lat_min=cfg["domain"]["arctic_lat_min"],
                             lat_max=cfg["domain"]["arctic_lat_max"],

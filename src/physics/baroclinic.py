@@ -336,12 +336,13 @@ def compute_eady_diagnostics(
     weights = area_weights(ds_dry)
     lat_name_sub = _get_lat_name(ds_dry)
 
-    eady_dry_mean = float(
-        (ds_dry["eady_dry"].mean(dim="time") * weights).sum(dim=lat_name_sub).mean()
-    )
-    eady_moist_mean = float(
-        (ds_moist["eady_moist"].mean(dim="time") * weights).sum(dim=lat_name_sub).mean()
-    )
+    dry_field = ds_dry["eady_dry"]
+    moist_field = ds_moist["eady_moist"]
+    if "time" in dry_field.dims:
+        dry_field = dry_field.mean(dim="time")
+        moist_field = moist_field.mean(dim="time")
+    eady_dry_mean = float((dry_field * weights).sum(dim=lat_name_sub).mean())
+    eady_moist_mean = float((moist_field * weights).sum(dim=lat_name_sub).mean())
 
     # Convert from s⁻¹ to day⁻¹
     SEC_PER_DAY = 86400.0
